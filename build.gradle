@@ -26,12 +26,14 @@ apply plugin: 'war'
 apply plugin: 'com.google.cloud.tools.appengine'
 appengine {
     deploy {
-        // deploy configuration
+        project 'uniprintbot'
+        version 'v1-0'
     }
 }
 
 dependencies {
     compile 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    compile 'org.telegram:telegrambots:3.6'
 
     compile 'com.google.appengine:appengine-api-1.0-sdk:+'
     providedCompile 'javax.servlet:javax.servlet-api:3.1.0'
