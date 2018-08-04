@@ -1,3 +1,6 @@
+package bot
+
+import BOT_PATH
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.telegram.telegrambots.api.objects.Update
 import javax.servlet.annotation.WebServlet
@@ -5,14 +8,14 @@ import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-@WebServlet(name = "Hello", value = ["/"])
+@WebServlet("/")
 class HomeController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         resp.writer.write("Hello, World!")
     }
 }
 
-@WebServlet("/$BOT_PATH/UniPrintBot")
+@WebServlet("/$BOT_PATH")
 class WebhookController : HttpServlet() {
     private val bot = UniPrintBot()
 

@@ -1,3 +1,7 @@
+package bot
+
+import BOT_PATH
+import BOT_TOKEN
 import org.telegram.telegrambots.api.methods.BotApiMethod
 import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.bots.TelegramWebhookBot
@@ -13,7 +17,7 @@ import javax.servlet.http.HttpServletResponse
 class WebhookRegisterController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         val bot = BotWebhook()
-        bot.setWebhook("https://uniprintbot.appspot.com/$BOT_PATH/UniPrintBot", null);
+        bot.setWebhook("https://uniprintbot.appspot.com/$BOT_PATH", null);
         resp.writer.println("Success")
     }
 

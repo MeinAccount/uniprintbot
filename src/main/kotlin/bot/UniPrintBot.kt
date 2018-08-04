@@ -1,3 +1,5 @@
+package bot
+
 import org.telegram.telegrambots.api.methods.BotApiMethod
 import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageReplyMarkup
@@ -10,7 +12,9 @@ data class AvailableFile(val path: String, val name: String, var selected: Boole
 class UniPrintBot {
     private val files = listOf(AvailableFile("algebra", "Algebra", false),
             AvailableFile("analysis", "Analysis", false),
-            AvailableFile("stat", "Statistik", false))
+            AvailableFile("stat", "Statistik", false),
+            AvailableFile("pse", "PSE", false),
+            AvailableFile("dsa", "DSA", false))
 
     fun onUpdateReceived(update: Update): BotApiMethod<*>? {
         if (update.hasMessage() && update.message.hasText()) {
@@ -39,10 +43,11 @@ class UniPrintBot {
 
     private fun getFilesKeyboard(): InlineKeyboardMarkup {
         val keyboard = InlineKeyboardMarkup()
-        keyboard.keyboard.add(files.map {
+        keyboard.keyboard.addAll(files.map {
             InlineKeyboardButton("${if (it.selected) "☒" else "☐"} ${it.name}")
                     .setCallbackData("${it.path}|${it.selected}")
-        })
+        }.plus(InlineKeyboardButton("Drucken")
+                .setCallbackData("print")).chunked(3))
 
         return keyboard
     }
