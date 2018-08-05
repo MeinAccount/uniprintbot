@@ -24,7 +24,7 @@ class WebhookController : HttpServlet() {
         val update = mapper.readValue(req.reader, Update::class.java)
         println(update)
 
-        val response = bot.onUpdateReceived(update)
+        val response = bot.processUpdate(update)
         println(response)
 
         resp.status = 200

@@ -1,8 +1,10 @@
 package bot
 
+import BOT_TOKEN
 import SSH_HOST
 import SSH_PASSWORD
 import SSH_USER
+import kotlinx.coroutines.experimental.launch
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
@@ -14,15 +16,17 @@ import org.telegram.telegrambots.api.objects.CallbackQuery
 import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboardButton
+import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import java.io.Serializable
+import java.util.concurrent.TimeUnit
 
 data class AvailableFile(val path: String, val name: String, var selected: Boolean)
 
-class UniPrintBot {
+open class PollingUniPrintBot : TelegramLongPollingBot() {
     private var useArchive = false
     private var files = emptyList<AvailableFile>()
 
-    fun onUpdateReceived(update: Update): BotApiMethod<*>? {
+    fun processUpdate(update: Update): BotApiMethod<*>? {
         if (update.hasMessage() && update.message.hasText()) {
             if (update.message.from.id != 639133737) {
                 return SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
@@ -54,7 +58,13 @@ class UniPrintBot {
             } else if (selected.size == 1) {
                 message.text = "${selected.single().name} wird gedruckt..."
             } else {
-                message.text = "${selected.dropLast(1).joinToString(", ", transform = AvailableFile::name)} und ${selected.last().name} werden gedruckt..."
+                val first = selected.dropLast(1).joinToString(", ", transform = AvailableFile::name)
+                message.text = "$first und ${selected.last().name} werden gedruckt..."
+            }
+
+            launch {
+                printSelectedFiles()
+                execute(SendMessage(callbackQuery.message.chatId, "Dateien wurde gedruckt!"))
             }
 
             message.messageId = callbackQuery.message.messageId
@@ -81,6 +91,20 @@ class UniPrintBot {
     }
 
 
+    private fun printSelectedFiles() {
+        SSHClient().use { sshClient ->
+            sshClient.addHostKeyVerifier(PromiscuousVerifier())
+            sshClient.connect(SSH_HOST)
+            sshClient.authPassword(SSH_USER, SSH_PASSWORD)
+
+            sshClient.startSession().use { session ->
+                session.exec(files.filter { it.selected }.joinToString("; ") {
+                    "echo \"${it.path}\" >> log"
+                }).join(5, TimeUnit.SECONDS)
+            }
+        }
+    }
+
     private fun loadRemoteFiles() {
         files = SSHClient().use { sshClient ->
             sshClient.addHostKeyVerifier(PromiscuousVerifier())
@@ -90,8 +114,9 @@ class UniPrintBot {
             sshClient.newSFTPClient().use { sftpClient ->
                 sftpClient.ls(if (useArchive) "Documents/print/archive" else "Documents/print")
             }
-        }.filter { it.isRegularFile }
-                .map { AvailableFile(it.name, it.name.takeWhile { it != '.' }, true) }
+        }.filter { it.isRegularFile }.map { file ->
+            AvailableFile(file.path, file.name.takeWhile { it != '.' }, true)
+        }
     }
 
     private fun getFilesKeyboard(): InlineKeyboardMarkup {
@@ -100,10 +125,30 @@ class UniPrintBot {
             InlineKeyboardButton("${if (it.selected) "☒" else "☐"} ${it.name}")
                     .setCallbackData("${it.path}|${it.selected}")
         }.plus(if (useArchive) InlineKeyboardButton("Aktiv").setCallbackData("main") else
-            InlineKeyboardButton("Archiv").setCallbackData("archive"))
-                .plus(InlineKeyboardButton("Drucken!").setCallbackData("print"))
-                .chunked(3)
+            InlineKeyboardButton("Archiv").setCallbackData("archive")
+        ).plus(InlineKeyboardButton("Drucken!").setCallbackData("print")).chunked(3)
 
         return markup
+    }
+
+
+    override fun onUpdateReceived(update: Update) {
+        processUpdate(update)?.let {
+            when (it) {
+                is SendMessage -> execute(it)
+                is EditMessageText -> execute(it)
+                is EditMessageReplyMarkup -> execute(it)
+                else -> TODO("not implemented")
+            }
+        }
+    }
+
+    override fun getBotToken() = BOT_TOKEN
+
+    override fun getBotUsername() = "UniPrintBot"
+}
+
+class UniPrintBot : PollingUniPrintBot() {
+    override fun clearWebhook() {
     }
 }
