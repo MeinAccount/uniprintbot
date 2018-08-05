@@ -17,10 +17,12 @@ import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
+import java.io.File
 import java.io.Serializable
 import java.util.concurrent.TimeUnit
 
-data class AvailableFile(val path: String, val name: String, var selected: Boolean)
+data class AvailableFile(val path: String, val name: String,
+                         var selected: Boolean, val inArchive: Boolean)
 
 open class PollingUniPrintBot : TelegramLongPollingBot() {
     private var useArchive = false
@@ -99,7 +101,14 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
             sshClient.startSession().use { session ->
                 session.exec(files.filter { it.selected }.joinToString("; ") {
-                    "echo \"${it.path}\" >> log"
+                    return@joinToString if (it.inArchive) {
+                        "echo \"${it.path}\" >> log"
+                    } else {
+                        val file = File(it.path)
+                        val target = "${file.parentFile}/archive/${file.name}"
+
+                        "mv \"${it.path}\" \"$target\"; echo \"$target\" >> log"
+                    }
                 }).join(5, TimeUnit.SECONDS)
             }
         }
@@ -115,7 +124,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                 sftpClient.ls(if (useArchive) "Documents/print/archive" else "Documents/print")
             }
         }.filter { it.isRegularFile }.map { file ->
-            AvailableFile(file.path, file.name.takeWhile { it != '.' }, true)
+            AvailableFile(file.path, file.name.substringBeforeLast("."), true, useArchive)
         }
     }
 
