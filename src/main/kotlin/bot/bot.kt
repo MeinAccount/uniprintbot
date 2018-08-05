@@ -1,14 +1,10 @@
 package bot
 
 import BOT_TOKEN
-import SSH_HOST
-import SSH_PASSWORD
-import SSH_USER
 import kotlinx.coroutines.experimental.launch
-import net.schmizz.sshj.SSHClient
-import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
 import org.telegram.telegrambots.api.methods.BotApiMethod
+import org.telegram.telegrambots.api.methods.GetFile
 import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageReplyMarkup
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageText
@@ -20,19 +16,28 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-data class AvailableFile(val path: String, val name: String,
-                         var selected: Boolean, val inArchive: Boolean)
+data class AvailableFile(val path: String, val name: String, var selected: Boolean, val inArchive: Boolean)
 
 open class PollingUniPrintBot : TelegramLongPollingBot() {
     private var useArchive = false
     private var files = emptyList<AvailableFile>()
 
     fun processUpdate(update: Update): BotApiMethod<*>? {
-        if (update.hasMessage() && update.message.hasText()) {
+        if (update.hasMessage()) {
             if (update.message.from.id != 639133737) {
                 return SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
             }
 
+            return processMessage(update)
+        } else if (update.hasCallbackQuery() && update.callbackQuery.from.id == 639133737) {
+            return processCallbackQuery(update.callbackQuery)
+        }
+
+        return null
+    }
+
+    private fun processMessage(update: Update): SendMessage? {
+        if (update.message.hasText()) {
             if (update.message.text == "/start") {
                 useArchive = false
                 loadRemoteFiles()
@@ -41,15 +46,35 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                 message.replyMarkup = getFilesKeyboard()
                 return message
             }
-        } else if (update.hasCallbackQuery() && update.callbackQuery.from.id == 639133737) {
-            return handleCallbackQuery(update.callbackQuery)
+
+            return SendMessage(update.message.chatId, "Ich habe dich leider nicht verstanden.")
+        } else if (update.message.hasDocument() && update.message.document.fileName.endsWith(".pdf")) {
+            launch {
+                val fileRetrieval = GetFile()
+                fileRetrieval.fileId = update.message.document.fileId
+
+                val result = execute(fileRetrieval)
+                sshClient { client ->
+                    client.startSession().use { session ->
+                        session.exec("temp_file=\$(mktemp); " +
+                                "wget -O \$temp_file \"${result.getFileUrl(BOT_TOKEN)}\"; " +
+                                "echo \$temp_file >> log").join(30, TimeUnit.SECONDS)
+                    }
+                }
+
+                execute(SendMessage(update.message.chatId,
+                        "${update.message.document.fileName} wurde gedruckt!"))
+            }
+
+            return null
         }
 
-        return null
+        return SendMessage(update.message.chatId, "Ich verarbeite nur PDF-Dateien.")
     }
 
-    private fun handleCallbackQuery(callbackQuery: CallbackQuery): BotApiMethod<*> {
-        if (callbackQuery.data == "print") {
+    private fun processCallbackQuery(callbackQuery: CallbackQuery): BotApiMethod<*> {
+        val split = callbackQuery.data.split("|")
+        if (split[0] == "print") {
             val message = EditMessageText()
             val selected = files.filter { it.selected }
             if (selected.isEmpty()) {
@@ -72,12 +97,11 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             message.chatId = callbackQuery.message.chatId.toString()
             message.inlineMessageId = callbackQuery.inlineMessageId
             return message
-        } else if (callbackQuery.data == "archive" || callbackQuery.data == "main") {
+        } else if (split[0] == "archive" || split[0] == "main") {
             useArchive = !useArchive
             loadRemoteFiles()
-        } else {
-            val search = callbackQuery.data.takeWhile { it != '|' }
-            files.firstOrNull { it.path == search }?.let {
+        } else if (split[0] == "toggleFile" && split.size == 3) {
+            files.firstOrNull { it.path == split[1] }?.let {
                 it.selected = !it.selected
             }
         }
@@ -93,12 +117,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
 
     private fun printSelectedFiles() {
-        SSHClient().use { sshClient ->
-            sshClient.addHostKeyVerifier(PromiscuousVerifier())
-            sshClient.connect(SSH_HOST)
-            sshClient.authPassword(SSH_USER, SSH_PASSWORD)
-
-            sshClient.startSession().use { session ->
+        sshClient { client ->
+            client.startSession().use { session ->
                 session.exec(files.filter { it.selected }.joinToString("; ") {
                     return@joinToString if (it.inArchive) {
                         "echo \"${it.path}\" >> log"
@@ -114,12 +134,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     }
 
     private fun loadRemoteFiles() {
-        files = SSHClient().use { sshClient ->
-            sshClient.addHostKeyVerifier(PromiscuousVerifier())
-            sshClient.connect(SSH_HOST)
-            sshClient.authPassword(SSH_USER, SSH_PASSWORD)
-
-            sshClient.newSFTPClient().use { sftpClient ->
+        files = sshClient { client ->
+            client.newSFTPClient().use { sftpClient ->
                 sftpClient.ls(if (useArchive) "Documents/print/archive" else "Documents/print")
             }
         }.filter { it.isRegularFile }.map { file ->
@@ -131,7 +147,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         val markup = InlineKeyboardMarkup()
         markup.keyboard = files.map {
             InlineKeyboardButton("${if (it.selected) "☒" else "☐"} ${it.name}")
-                    .setCallbackData("${it.path}|${it.selected}")
+                    .setCallbackData("toggleFile|${it.path}|${it.selected}")
         }.plus(if (useArchive) InlineKeyboardButton("Aktiv").setCallbackData("main") else
             InlineKeyboardButton("Archiv").setCallbackData("archive")
         ).plus(InlineKeyboardButton("Drucken!").setCallbackData("print")).chunked(3)
