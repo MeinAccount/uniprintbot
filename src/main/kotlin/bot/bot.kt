@@ -18,7 +18,6 @@ import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import java.io.File
-import java.io.Serializable
 import java.util.concurrent.TimeUnit
 
 data class AvailableFile(val path: String, val name: String,
@@ -49,7 +48,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         return null
     }
 
-    private fun handleCallbackQuery(callbackQuery: CallbackQuery): BotApiMethod<out Serializable> {
+    private fun handleCallbackQuery(callbackQuery: CallbackQuery): BotApiMethod<*> {
         if (callbackQuery.data == "print") {
             val message = EditMessageText()
             val selected = files.filter { it.selected }
@@ -124,7 +123,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                 sftpClient.ls(if (useArchive) "Documents/print/archive" else "Documents/print")
             }
         }.filter { it.isRegularFile }.map { file ->
-            AvailableFile(file.path, file.name.substringBeforeLast("."), true, useArchive)
+            AvailableFile(file.path, file.name.substringBeforeLast("."), !useArchive, useArchive)
         }
     }
 
