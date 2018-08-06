@@ -1,7 +1,7 @@
 package bot
 
+import AUTH_USER
 import BOT_TOKEN
-import com.google.cloud.datastore.Entity
 import kotlinx.coroutines.experimental.launch
 import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
 import org.telegram.telegrambots.api.methods.BotApiMethod
@@ -24,22 +24,16 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     private var files = emptyList<AvailableFile>()
 
     fun processUpdate(update: Update): BotApiMethod<*>? {
-        if (update.hasMessage()) {
-            val user = getUser(update.message.from.id)
-            return if (user != null) processMessage(update, user) else
-                SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
-        } else if (update.hasCallbackQuery()) {
-            val user = getUser(update.callbackQuery.from.id)
-            if (user != null) {
-                return processCallbackQuery(update.callbackQuery, user)
-            }
+        return when {
+            update.hasMessage() -> processMessage(update)
+            update.hasCallbackQuery() && update.callbackQuery.from.id == AUTH_USER ->
+                processCallbackQuery(update.callbackQuery)
+            else -> null
         }
-
-        return null
     }
 
-    private fun processMessage(update: Update, user: Entity): SendMessage? {
-        if (update.message.hasText()) {
+    private fun processMessage(update: Update): SendMessage? {
+        if (update.message.hasText() && update.message.from.id == AUTH_USER) {
             if (update.message.text == "/start") {
                 useArchive = false
                 loadRemoteFiles()
@@ -50,6 +44,11 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             }
 
             return SendMessage(update.message.chatId, "Ich habe dich leider nicht verstanden.")
+        }
+
+        val user = getUser(update.message.from.id)
+        if (user == null) {
+            return SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
         } else if (update.message.hasDocument() && update.message.document.fileName.endsWith(".pdf")) {
             launch {
                 val fileRetrieval = GetFile()
@@ -73,7 +72,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         return SendMessage(update.message.chatId, "Ich verarbeite nur PDF-Dateien.")
     }
 
-    private fun processCallbackQuery(callbackQuery: CallbackQuery, user: Entity): BotApiMethod<*> {
+    private fun processCallbackQuery(callbackQuery: CallbackQuery): BotApiMethod<*> {
         val split = callbackQuery.data.split("|")
         if (split[0] == "print") {
             val message = EditMessageText()
@@ -90,7 +89,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             }
 
             launch {
-                printSelectedFiles(user)
+                printSelectedFiles()
                 execute(SendMessage(callbackQuery.message.chatId, "Dateien wurde gedruckt!"))
             }
 
@@ -117,17 +116,17 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     }
 
 
-    private fun printSelectedFiles(user: Entity) {
+    private fun printSelectedFiles() {
         sshClient { client ->
             client.startSession().use { session ->
                 session.exec(files.filter { it.selected }.joinToString("; ") {
                     return@joinToString if (it.inArchive) {
-                        printCommand(it.path, user)
+                        printCommand(it.path)
                     } else {
                         val file = File(it.path)
                         val target = "${file.parentFile}/archive/${file.name}"
 
-                        "mv \"${it.path}\" \"$target\"; ${printCommand(target, user)}"
+                        "mv \"${it.path}\" \"$target\"; ${printCommand(target)}"
                     }
                 }).join(5, TimeUnit.SECONDS)
             }

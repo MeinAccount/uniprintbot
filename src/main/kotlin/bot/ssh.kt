@@ -15,5 +15,5 @@ fun <T> sshClient(run: (SSHClient) -> T) = SSHClient().use { sshClient ->
     run(sshClient)
 }
 
-fun printCommand(path: String, user: Entity) =
-        "echo \"${path} von ${user.getString("name")} am ${Date()}\" >> log"
+fun printCommand(path: String, user: Entity? = null) =
+        "echo \"${path} von ${user?.getString("name")} am ${Date()}\" >> log"
