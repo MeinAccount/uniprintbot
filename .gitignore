@@ -4,3 +4,5 @@
 /.idea/
 /build/
 *.iml
+
+src/main/webapp/WEB-INF/uniprintbot.json

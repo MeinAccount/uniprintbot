@@ -1,6 +1,7 @@
 package bot
 
 import BOT_TOKEN
+import com.google.cloud.datastore.Entity
 import kotlinx.coroutines.experimental.launch
 import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
 import org.telegram.telegrambots.api.methods.BotApiMethod
@@ -24,19 +25,20 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
     fun processUpdate(update: Update): BotApiMethod<*>? {
         if (update.hasMessage()) {
-            if (update.message.from.id != 639133737) {
-                return SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
+            val user = getUser(update.message.from.id)
+            return if (user != null) processMessage(update, user) else
+                SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
+        } else if (update.hasCallbackQuery()) {
+            val user = getUser(update.callbackQuery.from.id)
+            if (user != null) {
+                return processCallbackQuery(update.callbackQuery, user)
             }
-
-            return processMessage(update)
-        } else if (update.hasCallbackQuery() && update.callbackQuery.from.id == 639133737) {
-            return processCallbackQuery(update.callbackQuery)
         }
 
         return null
     }
 
-    private fun processMessage(update: Update): SendMessage? {
+    private fun processMessage(update: Update, user: Entity): SendMessage? {
         if (update.message.hasText()) {
             if (update.message.text == "/start") {
                 useArchive = false
@@ -58,12 +60,11 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                     client.startSession().use { session ->
                         session.exec("temp_file=\$(mktemp); " +
                                 "wget -O \$temp_file \"${result.getFileUrl(BOT_TOKEN)}\"; " +
-                                "echo \$temp_file >> log").join(30, TimeUnit.SECONDS)
+                                printCommand("\$temp_file", user)).join(30, TimeUnit.SECONDS)
                     }
                 }
 
-                execute(SendMessage(update.message.chatId,
-                        "${update.message.document.fileName} wurde gedruckt!"))
+                execute(SendMessage(update.message.chatId, "${update.message.document.fileName} wurde gedruckt!"))
             }
 
             return null
@@ -72,7 +73,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         return SendMessage(update.message.chatId, "Ich verarbeite nur PDF-Dateien.")
     }
 
-    private fun processCallbackQuery(callbackQuery: CallbackQuery): BotApiMethod<*> {
+    private fun processCallbackQuery(callbackQuery: CallbackQuery, user: Entity): BotApiMethod<*> {
         val split = callbackQuery.data.split("|")
         if (split[0] == "print") {
             val message = EditMessageText()
@@ -89,7 +90,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             }
 
             launch {
-                printSelectedFiles()
+                printSelectedFiles(user)
                 execute(SendMessage(callbackQuery.message.chatId, "Dateien wurde gedruckt!"))
             }
 
@@ -116,17 +117,17 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     }
 
 
-    private fun printSelectedFiles() {
+    private fun printSelectedFiles(user: Entity) {
         sshClient { client ->
             client.startSession().use { session ->
                 session.exec(files.filter { it.selected }.joinToString("; ") {
                     return@joinToString if (it.inArchive) {
-                        "echo \"${it.path}\" >> log"
+                        printCommand(it.path, user)
                     } else {
                         val file = File(it.path)
                         val target = "${file.parentFile}/archive/${file.name}"
 
-                        "mv \"${it.path}\" \"$target\"; echo \"$target\" >> log"
+                        "mv \"${it.path}\" \"$target\"; ${printCommand(target, user)}"
                     }
                 }).join(5, TimeUnit.SECONDS)
             }

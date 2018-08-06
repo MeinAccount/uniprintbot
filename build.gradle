@@ -39,12 +39,13 @@ dependencies {
     compile 'com.hierynomus:sshj:0.26.0'
     compile 'org.slf4j:slf4j-simple:1.7.25'
 
-    compile 'com.google.appengine:appengine-api-1.0-sdk:+'
+    compile 'com.google.cloud:google-cloud-datastore:1.27.0'
+//    compile 'com.google.appengine:appengine-api-1.0-sdk:+'
     providedCompile 'javax.servlet:javax.servlet-api:3.1.0'
 
-    testCompile group: 'junit', name: 'junit', version: '4.12'
-    testCompile 'com.google.truth:truth:0.33'
-    testCompile 'org.mockito:mockito-all:1.10.19'
+//    testCompile group: 'junit', name: 'junit', version: '4.12'
+//    testCompile 'com.google.truth:truth:0.33'
+//    testCompile 'org.mockito:mockito-all:1.10.19'
 
     testCompile 'com.google.appengine:appengine-testing:+'
     testCompile 'com.google.appengine:appengine-api-stubs:+'
