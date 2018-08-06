@@ -58,6 +58,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             val message = SendMessage(update.message.chatId, "Bestätige den Druckvorgang:")
             message.replyToMessageId = update.message.messageId
             message.replyMarkup = keyboard
+            saveUpload(user, update.message.document)
 
             return message
         }
@@ -114,7 +115,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             }
 
             launch {
-                printSelectedFiles()
+                printSelectedFiles(user)
 
                 val messageDone = SendMessage(callbackQuery.message.chatId, "Dateien wurde gedruckt!")
                 messageDone.replyToMessageId = callbackQuery.message.messageId
@@ -143,17 +144,17 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     }
 
 
-    private fun printSelectedFiles() {
+    private fun printSelectedFiles(user: Entity) {
         sshClient { client ->
             client.startSession().use { session ->
                 session.exec(files.filter { it.selected }.joinToString("; ") {
                     return@joinToString if (it.inArchive) {
-                        printCommand(it.path)
+                        printCommand(it.path, user)
                     } else {
                         val file = File(it.path)
                         val target = "${file.parentFile}/archive/${file.name}"
 
-                        "mv \"${it.path}\" \"$target\"; ${printCommand(target)}"
+                        "mv \"${it.path}\" \"$target\"; ${printCommand(target, user)}"
                     }
                 }).join(5, TimeUnit.SECONDS)
             }
