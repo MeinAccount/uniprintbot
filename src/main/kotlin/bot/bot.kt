@@ -7,6 +7,7 @@ import kotlinx.coroutines.experimental.launch
 import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
 import org.telegram.telegrambots.api.methods.BotApiMethod
 import org.telegram.telegrambots.api.methods.GetFile
+import org.telegram.telegrambots.api.methods.send.SendChatAction
 import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageReplyMarkup
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageText
@@ -38,7 +39,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         return null
     }
 
-    private fun processMessage(update: Update, user: Entity): SendMessage? {
+    private fun processMessage(update: Update, user: Entity): BotApiMethod<*>? {
         if (update.message.hasText()) {
             // process commands
             if (update.message.text == "/start") {
@@ -46,16 +47,24 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                     return SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
                 }
 
-                fileList = SshBotFileList(false)
+                launch {
+                    fileList = SshBotFileList(false)
+                    execute(SendMessage(update.message.chatId, "Welche Dateien sollen gedruckt werden?").also { message ->
+                        message.replyMarkup = getFilesKeyboard()
+                    })
+                }
             } else if (update.message.text == "/statistik") {
-                fileList = IliasBotFileList()
+                launch {
+                    fileList = IliasBotFileList()
+                    execute(SendMessage(update.message.chatId, "Welche Dateien sollen gedruckt werden?").also { message ->
+                        message.replyMarkup = getFilesKeyboard()
+                    })
+                }
             } else {
                 return SendMessage(update.message.chatId, "Ich habe dich leider nicht verstanden.")
             }
 
-            return SendMessage(update.message.chatId, "Welche Dateien sollen gedruckt werden?").also { message ->
-                message.replyMarkup = getFilesKeyboard()
-            }
+            return SendChatAction(update.message.chatId, "typing")
 
         } else if (update.message.hasDocument() && update.message.document.fileName.endsWith(".pdf")) {
             // process uploaded pdfs
@@ -166,6 +175,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         processUpdate(update)?.let {
             when (it) {
                 is SendMessage -> execute(it)
+                is SendChatAction -> execute(it)
                 is EditMessageText -> execute(it)
                 is EditMessageReplyMarkup -> execute(it)
                 else -> TODO("not implemented")
