@@ -15,14 +15,11 @@ import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
-import java.io.File
+import remote.*
 import java.util.concurrent.TimeUnit
 
-data class AvailableFile(val path: String, val name: String, var selected: Boolean, val inArchive: Boolean)
-
 open class PollingUniPrintBot : TelegramLongPollingBot() {
-    private var useArchive = false
-    private var files = emptyList<AvailableFile>()
+    private var fileList: BotFileList? = null
 
     fun processUpdate(update: Update): BotApiMethod<*>? {
         if (update.hasMessage()) {
@@ -39,28 +36,38 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     }
 
     private fun processMessage(update: Update, user: Entity): SendMessage? {
-        if (update.message.hasText() && update.message.from.id == AUTH_USER) {
+        if (update.message.hasText()) {
+            // process commands
             if (update.message.text == "/start") {
-                useArchive = false
-                loadRemoteFiles()
+                if (update.message.from.id != AUTH_USER) {
+                    return SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
+                }
 
-                val message = SendMessage(update.message.chatId, "Welche Dateien sollen gedruckt werden?")
-                message.replyMarkup = getFilesKeyboard()
-                return message
+                fileList = SshBotFileList(false)
+            } else if (update.message.text == "/statistik") {
+                fileList = IliasBotFileList()
+            } else {
+                return SendMessage(update.message.chatId, "Ich habe dich leider nicht verstanden.")
             }
 
-            return SendMessage(update.message.chatId, "Ich habe dich leider nicht verstanden.")
+            return SendMessage(update.message.chatId, "Welche Dateien sollen gedruckt werden?").also { message ->
+                message.replyMarkup = getFilesKeyboard()
+            }
+
         } else if (update.message.hasDocument() && update.message.document.fileName.endsWith(".pdf")) {
+            // process uploaded pdfs
+            launch {
+                saveUpload(user, update.message.document)
+            }
+
             val keyboard = InlineKeyboardMarkup()
             keyboard.keyboard.add(listOf(InlineKeyboardButton("${update.message.document.fileName} drucken")
                     .setCallbackData("file|${update.message.document.fileId}")))
 
-            val message = SendMessage(update.message.chatId, "Bestätige den Druckvorgang:")
-            message.replyToMessageId = update.message.messageId
-            message.replyMarkup = keyboard
-            saveUpload(user, update.message.document)
-
-            return message
+            return SendMessage(update.message.chatId, "Bestätige den Druckvorgang:").also { message ->
+                message.replyToMessageId = update.message.messageId
+                message.replyMarkup = keyboard
+            }
         }
 
         return SendMessage(update.message.chatId, "Ich verarbeite nur PDF-Dateien.")
@@ -70,56 +77,51 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         val split = callbackQuery.data.split("|")
         if (split[0] == "file") {
             launch {
-                val fileRetrieval = GetFile()
-                fileRetrieval.fileId = split[1]
-
-                val result = execute(fileRetrieval)
+                val file = execute(GetFile().also { it.fileId = split[1] })
                 sshClient { client ->
                     client.startSession().use { session ->
-                        session.exec("temp_file=\$(mktemp); " +
-                                "wget -O \$temp_file \"${result.getFileUrl(BOT_TOKEN)}\"; " +
-                                printCommand("\$temp_file", user)).join(30, TimeUnit.SECONDS)
+                        session.exec("""temp_file=$(mktemp);
+                            |wget -O ${"$"}temp_file "${file.getFileUrl(BOT_TOKEN)}";
+                            |${printCommand("\$temp_file", user)}""".trimMargin()
+                        ).join(30, TimeUnit.SECONDS)
                     }
                 }
 
-                val messageDone = SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!")
-                messageDone.replyToMessageId = callbackQuery.message.replyToMessage.messageId
-                execute(messageDone)
+                execute(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!").also { message ->
+                    message.replyToMessageId = callbackQuery.message.replyToMessage.messageId
+                })
             }
 
-            val message = EditMessageText()
-            message.text = "Datei wird gedruckt..."
-            message.messageId = callbackQuery.message.messageId
-            message.chatId = callbackQuery.message.chatId.toString()
-            return message
+            return EditMessageText().also { message ->
+                message.text = "Datei wird gedruckt..."
+                message.messageId = callbackQuery.message.messageId
+                message.chatId = callbackQuery.message.chatId.toString()
+            }
         }
 
 
         // process ssh file actions
         if (callbackQuery.from.id != AUTH_USER) {
-            return SendMessage(callbackQuery.message.chatId, "Permission Denied for user ${callbackQuery.message.from.id}")
+            return SendMessage(callbackQuery.message.chatId, "Permission Denied for user ${callbackQuery.from.id}")
         }
 
-        if (split[0] == "print") {
+        if (split[0] == "print" && fileList != null) {
             val message = EditMessageText()
-            val selected = files.filter { it.selected }
+            val selected = fileList!!.files.filter { it.selected }
             if (selected.isEmpty()) {
-                return AnswerCallbackQuery().also {
-                    it.callbackQueryId = callbackQuery.id
-                }
+                return AnswerCallbackQuery().also { it.callbackQueryId = callbackQuery.id }
             } else if (selected.size == 1) {
                 message.text = "${selected.single().name} wird gedruckt..."
             } else {
-                val first = selected.dropLast(1).joinToString(", ", transform = AvailableFile::name)
+                val first = selected.dropLast(1).joinToString(", ", transform = BotFile::name)
                 message.text = "$first und ${selected.last().name} werden gedruckt..."
             }
 
             launch {
-                printSelectedFiles(user)
-
-                val messageDone = SendMessage(callbackQuery.message.chatId, "Dateien wurde gedruckt!")
-                messageDone.replyToMessageId = callbackQuery.message.messageId
-                execute(messageDone)
+                fileList!!.printSelected(user)
+                execute(SendMessage(callbackQuery.message.chatId, "Dateien wurde gedruckt!").also {
+                    it.replyToMessageId = callbackQuery.message.messageId
+                })
             }
 
             message.messageId = callbackQuery.message.messageId
@@ -127,60 +129,36 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             message.inlineMessageId = callbackQuery.inlineMessageId
             return message
         } else if (split[0] == "archive" || split[0] == "main") {
-            useArchive = !useArchive
-            loadRemoteFiles()
+            fileList = SshBotFileList(if (fileList is SshBotFileList) !(fileList as SshBotFileList).useArchive else false)
         } else if (split[0] == "toggleFile" && split.size == 3) {
-            files.firstOrNull { it.path == split[1] }?.let {
+            fileList?.files?.firstOrNull { it.name == split[1] }?.let {
                 it.selected = !it.selected
             }
         }
 
-        // update keyboard
-        val message = EditMessageReplyMarkup()
-        message.messageId = callbackQuery.message.messageId
-        message.chatId = callbackQuery.message.chatId.toString()
-        message.replyMarkup = getFilesKeyboard()
-        return message
-    }
-
-
-    private fun printSelectedFiles(user: Entity) {
-        sshClient { client ->
-            client.startSession().use { session ->
-                session.exec(files.filter { it.selected }.joinToString("; ") {
-                    return@joinToString if (it.inArchive) {
-                        printCommand(it.path, user)
-                    } else {
-                        val file = File(it.path)
-                        val target = "${file.parentFile}/archive/${file.name}"
-
-                        "mv \"${it.path}\" \"$target\"; ${printCommand(target, user)}"
-                    }
-                }).join(5, TimeUnit.SECONDS)
-            }
-        }
-    }
-
-    private fun loadRemoteFiles() {
-        files = sshClient { client ->
-            client.newSFTPClient().use { sftpClient ->
-                sftpClient.ls(if (useArchive) "Documents/print/archive" else "Documents/print")
-            }
-        }.filter { it.isRegularFile }.map { file ->
-            AvailableFile(file.path, file.name.substringBeforeLast("."), !useArchive, useArchive)
+        return EditMessageReplyMarkup().also { message ->
+            message.messageId = callbackQuery.message.messageId
+            message.chatId = callbackQuery.message.chatId.toString()
+            message.replyMarkup = getFilesKeyboard()
         }
     }
 
     private fun getFilesKeyboard(): InlineKeyboardMarkup {
-        val markup = InlineKeyboardMarkup()
-        markup.keyboard = files.map {
+        val buttons = fileList!!.files.map {
             InlineKeyboardButton("${if (it.selected) "☒" else "☐"} ${it.name}")
-                    .setCallbackData("toggleFile|${it.path}|${it.selected}")
-        }.plus(if (useArchive) InlineKeyboardButton("Aktiv").setCallbackData("main") else
-            InlineKeyboardButton("Archiv").setCallbackData("archive")
-        ).plus(InlineKeyboardButton("Drucken!").setCallbackData("print")).chunked(3)
+                    .setCallbackData("toggleFile|${it.name}|${it.selected}")
+        }.toMutableList()
 
-        return markup
+        if (fileList is SshBotFileList) {
+            if ((fileList as SshBotFileList).useArchive) {
+                buttons.add(InlineKeyboardButton("Aktiv").setCallbackData("main"))
+            } else {
+                buttons.add(InlineKeyboardButton("Archiv").setCallbackData("archive"))
+            }
+        }
+        buttons.add(InlineKeyboardButton("Drucken!").setCallbackData("print"))
+
+        return InlineKeyboardMarkup().also { it.keyboard = buttons.chunked(3) }
     }
 
 
@@ -199,6 +177,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
     override fun getBotUsername() = "UniPrintBot"
 }
+
 
 class UniPrintBot : PollingUniPrintBot() {
     override fun clearWebhook() {

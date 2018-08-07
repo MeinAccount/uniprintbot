@@ -1,4 +1,4 @@
-package bot
+package remote
 
 import SSH_HOST
 import SSH_PASSWORD
