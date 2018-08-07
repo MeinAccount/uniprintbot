@@ -4,6 +4,7 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.Timestamp
 import com.google.cloud.datastore.DatastoreOptions
 import com.google.cloud.datastore.Entity
+import com.google.cloud.datastore.PathElement
 import org.telegram.telegrambots.api.objects.Document
 import java.io.File
 import java.io.FileInputStream
@@ -18,10 +19,13 @@ private val datastore = DatastoreOptions.newBuilder()
 private val userKeys = datastore.newKeyFactory().setKind("User")
 fun getUser(userId: Int): Entity? = datastore.get(userKeys.newKey(userId.toString()))
 
-private val uploads = datastore.newKeyFactory().setKind("Upload")
 fun saveUpload(user: Entity, document: Document) {
-    datastore.put(Entity.newBuilder(uploads.newKey())
-            .set("user", user.key.name)
+    val key = datastore.newKeyFactory()
+            .addAncestor(PathElement.of("User", user.key.name))
+            .setKind("Upload")
+            .newKey()
+
+    datastore.put(Entity.newBuilder(key)
             .set("fileId", document.fileId)
             .set("fileName", document.fileName)
             .set("fileSize", document.fileSize.toLong())

@@ -15,7 +15,10 @@ import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
-import remote.*
+import remote.getUser
+import remote.printCommand
+import remote.saveUpload
+import remote.sshClient
 import java.util.concurrent.TimeUnit
 
 open class PollingUniPrintBot : TelegramLongPollingBot() {
@@ -56,13 +59,10 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
         } else if (update.message.hasDocument() && update.message.document.fileName.endsWith(".pdf")) {
             // process uploaded pdfs
-            launch {
-                saveUpload(user, update.message.document)
-            }
-
             val keyboard = InlineKeyboardMarkup()
             keyboard.keyboard.add(listOf(InlineKeyboardButton("${update.message.document.fileName} drucken")
                     .setCallbackData("file|${update.message.document.fileId}")))
+            saveUpload(user, update.message.document)
 
             return SendMessage(update.message.chatId, "Bestätige den Druckvorgang:").also { message ->
                 message.replyToMessageId = update.message.messageId
