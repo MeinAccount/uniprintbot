@@ -6,4 +6,9 @@
 		<schedule>every day 04:37</schedule>
 		<timezone>Europe/Berlin</timezone>
 	</cron>
+	<cron>
+		<url>/ilias/notify</url>
+		<description>Notifies users about new files in Ilias</description>
+		<schedule>every 1 hours</schedule>
+	</cron>
 </cronentries>

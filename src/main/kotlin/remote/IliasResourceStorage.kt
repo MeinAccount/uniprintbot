@@ -33,7 +33,7 @@ object IliasResourceStorage {
                 val key = datastore.newKeyFactory()
                         .addAncestor(PathElement.of("User", user.key.name))
                         .setKind("IliasResource").newKey()
-                resource.entity = transaction.put(Entity.newBuilder(key)
+                resource.entity = transaction.add(Entity.newBuilder(key)
                         .set("type", resource.type)
                         .set("name", resource.name)
                         .set("url", resource.url)
