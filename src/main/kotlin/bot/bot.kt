@@ -10,6 +10,7 @@ import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageReplyMarkup
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageText
 import org.telegram.telegrambots.api.objects.CallbackQuery
+import org.telegram.telegrambots.api.objects.Document
 import org.telegram.telegrambots.api.objects.Message
 import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup
@@ -45,7 +46,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                                     "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken."))
                 "/print" ->
                     if (message.isReply && message.replyToMessage.hasDocument() &&
-                            message.replyToMessage.document.fileName.endsWith(".pdf")) {
+                            validateTelegramFile(message.replyToMessage.document)) {
                         execute(SendChatAction(message.chatId, "typing"))
                         printTelegrammFile(message, user, message.replyToMessage.document.fileId)
                     } else {
@@ -59,7 +60,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                     val iliasResources = Ilias.listIliasResources("statistik", ILIAS_PAGE_ID)
                     IliasResourceStorage.save(user, iliasResources)
 
-                    val response = execute(SendMessage(message.chatId, "Welche Dateien sollen gedruckt werden?").also { response ->
+                    val response = execute(SendMessage(message.chatId,
+                            "Welche Dateien sollen gedruckt werden?").also { response ->
                         response.replyMarkup = getIliasResourcesKeyboard(iliasResources)
                     })
                     IliasResourceStorage.updateMessage(response.chatId, response.messageId, iliasResources)
@@ -67,7 +69,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                 else -> execute(SendMessage(message.chatId, "Ich habe dich leider nicht verstanden."))
             }
 
-        } else if (message.hasDocument() && message.document.fileName.endsWith(".pdf")) {
+        } else if (message.hasDocument() && validateTelegramFile(message.document)) {
             // process uploaded PDFs
             val keyboard = InlineKeyboardMarkup()
             keyboard.keyboard.add(listOf(InlineKeyboardButton("${message.document.fileName} drucken")
@@ -130,6 +132,9 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     }
 
 
+    private fun validateTelegramFile(document: Document) =
+            document.fileName.endsWith(".pdf") && document.mimeType == "application/pdf"
+
     private fun printTelegrammFile(message: Message, user: Entity, fileId: String) {
         val file = execute(GetFile().also { it.fileId = fileId })
         RemoteHost.printTelegramFile(user, file)
@@ -139,7 +144,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         })
     }
 
-    private fun printIliasResources(callbackQuery: CallbackQuery, user: Entity, iliasResources: List<IliasResource>, text: String) {
+    private fun printIliasResources(callbackQuery: CallbackQuery, user: Entity,
+                                    iliasResources: List<IliasResource>, text: String) {
         execute(EditMessageText().also { response ->
             response.messageId = callbackQuery.message.messageId
             response.text = text
