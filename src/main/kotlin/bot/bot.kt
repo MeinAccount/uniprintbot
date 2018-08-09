@@ -1,186 +1,151 @@
 package bot
 
-import AUTH_USER
 import BOT_TOKEN
+import ILIAS_PAGE_ID
 import com.google.cloud.datastore.Entity
-import kotlinx.coroutines.experimental.launch
 import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
-import org.telegram.telegrambots.api.methods.BotApiMethod
 import org.telegram.telegrambots.api.methods.GetFile
 import org.telegram.telegrambots.api.methods.send.SendChatAction
 import org.telegram.telegrambots.api.methods.send.SendMessage
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageReplyMarkup
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageText
 import org.telegram.telegrambots.api.objects.CallbackQuery
+import org.telegram.telegrambots.api.objects.Message
 import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
-import remote.getUser
-import remote.printCommand
-import remote.saveUpload
-import remote.sshClient
-import java.util.concurrent.TimeUnit
+import remote.*
 
 open class PollingUniPrintBot : TelegramLongPollingBot() {
-    private var fileList: BotFileList? = null
-
-    fun processUpdate(update: Update): BotApiMethod<*>? {
+    override fun onUpdateReceived(update: Update) {
         if (update.hasMessage()) {
-            val user = getUser(update.message.from.id)
-                    ?: return SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
-            return processMessage(update, user)
+            val user = UserStorage.getUser(update.message.from.id)
+            if (user == null) {
+                execute(SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}"))
+            } else {
+                processMessage(update.message, user)
+            }
         } else if (update.hasCallbackQuery()) {
-            val user = getUser(update.callbackQuery.from.id)
-                    ?: return SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
-            return processCallbackQuery(update.callbackQuery, user)
+            val user = UserStorage.getUser(update.callbackQuery.from.id)
+            if (user == null) {
+                execute(SendMessage(update.message.chatId, "Permission Denied for user ${update.callbackQuery.from.id}"))
+            } else {
+                processCallbackQuery(update.callbackQuery, user)
+            }
         }
-
-        return null
     }
 
-    private fun processMessage(update: Update, user: Entity): BotApiMethod<*>? {
-        if (update.message.hasText()) {
-            // process commands
-            if (update.message.text == "/start") {
-                if (update.message.from.id != AUTH_USER) {
-                    return SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}")
-                }
+    private fun processMessage(message: Message, user: Entity) {
+        if (message.hasText()) {
+            when { // process commands
+                message.text == "/start" ->
+                    execute(SendMessage(message.chatId, "Sende mir eine PDF-Datei oder drucke Statistik-Blätter mit /statistik."))
+                message.text == "/statistik" -> {
+                    execute(SendChatAction(message.chatId, "typing"))
 
-                launch {
-                    fileList = SshBotFileList(false)
-                    execute(SendMessage(update.message.chatId, "Welche Dateien sollen gedruckt werden?").also { message ->
-                        message.replyMarkup = getFilesKeyboard()
+                    val remoteFiles = Ilias.listFiles("statistik", ILIAS_PAGE_ID)
+                    RemoteFileStorage.save(user, remoteFiles)
+
+                    val response = execute(SendMessage(message.chatId, "Welche Dateien sollen gedruckt werden?").also { response ->
+                        response.replyMarkup = getFilesKeyboard(remoteFiles)
                     })
+                    RemoteFileStorage.updateMessage(response.chatId, response.messageId, remoteFiles)
                 }
-            } else if (update.message.text == "/statistik") {
-                launch {
-                    fileList = IliasBotFileList()
-                    execute(SendMessage(update.message.chatId, "Welche Dateien sollen gedruckt werden?").also { message ->
-                        message.replyMarkup = getFilesKeyboard()
-                    })
-                }
-            } else {
-                return SendMessage(update.message.chatId, "Ich habe dich leider nicht verstanden.")
+                else -> execute(SendMessage(message.chatId, "Ich habe dich leider nicht verstanden."))
             }
 
-            return SendChatAction(update.message.chatId, "typing")
-
-        } else if (update.message.hasDocument() && update.message.document.fileName.endsWith(".pdf")) {
-            // process uploaded pdfs
+        } else if (message.hasDocument() && message.document.fileName.endsWith(".pdf")) {
+            // process uploaded PDFs
             val keyboard = InlineKeyboardMarkup()
-            keyboard.keyboard.add(listOf(InlineKeyboardButton("${update.message.document.fileName} drucken")
-                    .setCallbackData("file|${update.message.document.fileId}")))
-            saveUpload(user, update.message.document)
+            keyboard.keyboard.add(listOf(InlineKeyboardButton("${message.document.fileName} drucken")
+                    .setCallbackData("file|${message.document.fileId}")))
+            execute(SendMessage(message.chatId, "Bestätige den Druckvorgang:").also { response ->
+                response.replyToMessageId = message.messageId
+                response.replyMarkup = keyboard
+            })
 
-            return SendMessage(update.message.chatId, "Bestätige den Druckvorgang:").also { message ->
-                message.replyToMessageId = update.message.messageId
-                message.replyMarkup = keyboard
-            }
+            UserStorage.saveUpload(user, message.document)
+        } else {
+            execute(SendMessage(message.chatId, "Ich verarbeite nur PDF-Dateien."))
         }
-
-        return SendMessage(update.message.chatId, "Ich verarbeite nur PDF-Dateien.")
     }
 
-    private fun processCallbackQuery(callbackQuery: CallbackQuery, user: Entity): BotApiMethod<*> {
+
+    private fun processCallbackQuery(callbackQuery: CallbackQuery, user: Entity) {
         val split = callbackQuery.data.split("|")
-        if (split[0] == "file") {
-            launch {
+        if (split[0] == "print") {
+            val remoteFiles = RemoteFileStorage.get(user, callbackQuery.message.chatId, callbackQuery.message.messageId)
+            val selected = remoteFiles.filter { it.selected }
+            when (selected.size) {
+                0 -> execute(AnswerCallbackQuery().also { it.callbackQueryId = callbackQuery.id })
+                1 -> printRemoteFiles(callbackQuery, user, remoteFiles, "${selected.single().name} wird gedruckt...")
+                else -> {
+                    val first = selected.dropLast(1).joinToString(", ", transform = RemoteFile::name)
+                    printRemoteFiles(callbackQuery, user, remoteFiles, "$first und ${selected.last().name} werden gedruckt...")
+                }
+            }
+
+        } else if (split.size == 2) {
+            if (split[0] == "file") {
+                // print PDF file
+                execute(EditMessageText().also { response ->
+                    response.text = "Datei wird gedruckt..."
+                    response.messageId = callbackQuery.message.messageId
+                    response.chatId = callbackQuery.message.chatId.toString()
+                })
+
                 val file = execute(GetFile().also { it.fileId = split[1] })
-                sshClient { client ->
-                    client.startSession().use { session ->
-                        session.exec("""temp_file=$(mktemp);
-                            |wget -O ${"$"}temp_file "${file.getFileUrl(BOT_TOKEN)}";
-                            |${printCommand("\$temp_file", user)}""".trimMargin()
-                        ).join(30, TimeUnit.SECONDS)
-                    }
+                RemoteHost.printTelegramFile(user, file)
+
+                execute(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!").also { response ->
+                    response.replyToMessageId = callbackQuery.message.replyToMessage.messageId
+                })
+            } else if (split[0] == "toggle") {
+                val fileId = split[1].toLong()
+                val remoteFiles = RemoteFileStorage.get(user, callbackQuery.message.chatId, callbackQuery.message.messageId)
+
+                remoteFiles.firstOrNull { it.entity?.key?.id == fileId }?.let { file ->
+                    file.selected = !file.selected
+                    RemoteFileStorage.updateSelected(file)
                 }
 
-                execute(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!").also { message ->
-                    message.replyToMessageId = callbackQuery.message.replyToMessage.messageId
+                execute(EditMessageReplyMarkup().also { response ->
+                    response.messageId = callbackQuery.message.messageId
+                    response.chatId = callbackQuery.message.chatId.toString()
+                    response.replyMarkup = getFilesKeyboard(remoteFiles)
                 })
-            }
-
-            return EditMessageText().also { message ->
-                message.text = "Datei wird gedruckt..."
-                message.messageId = callbackQuery.message.messageId
-                message.chatId = callbackQuery.message.chatId.toString()
+                execute(AnswerCallbackQuery().setCallbackQueryId(callbackQuery.id))
             }
         }
 
-
-        // process ssh file actions
-        if (callbackQuery.from.id != AUTH_USER) {
-            return SendMessage(callbackQuery.message.chatId, "Permission Denied for user ${callbackQuery.from.id}")
-        }
-
-        if (split[0] == "print" && fileList != null) {
-            val message = EditMessageText()
-            val selected = fileList!!.files.filter { it.selected }
-            if (selected.isEmpty()) {
-                return AnswerCallbackQuery().also { it.callbackQueryId = callbackQuery.id }
-            } else if (selected.size == 1) {
-                message.text = "${selected.single().name} wird gedruckt..."
-            } else {
-                val first = selected.dropLast(1).joinToString(", ", transform = BotFile::name)
-                message.text = "$first und ${selected.last().name} werden gedruckt..."
-            }
-
-            launch {
-                fileList!!.printSelected(user)
-                execute(SendMessage(callbackQuery.message.chatId, "Dateien wurde gedruckt!").also {
-                    it.replyToMessageId = callbackQuery.message.messageId
-                })
-            }
-
-            message.messageId = callbackQuery.message.messageId
-            message.chatId = callbackQuery.message.chatId.toString()
-            message.inlineMessageId = callbackQuery.inlineMessageId
-            return message
-        } else if (split[0] == "archive" || split[0] == "main") {
-            fileList = SshBotFileList(if (fileList is SshBotFileList) !(fileList as SshBotFileList).useArchive else false)
-        } else if (split[0] == "toggleFile" && split.size == 3) {
-            fileList?.files?.firstOrNull { it.name == split[1] }?.let {
-                it.selected = !it.selected
-            }
-        }
-
-        return EditMessageReplyMarkup().also { message ->
-            message.messageId = callbackQuery.message.messageId
-            message.chatId = callbackQuery.message.chatId.toString()
-            message.replyMarkup = getFilesKeyboard()
-        }
+        // ignore unknown or invalid stuff
     }
 
-    private fun getFilesKeyboard(): InlineKeyboardMarkup {
-        val buttons = fileList!!.files.map {
-            InlineKeyboardButton("${if (it.selected) "☒" else "☐"} ${it.name}")
-                    .setCallbackData("toggleFile|${it.name}|${it.selected}")
-        }.toMutableList()
+    private fun printRemoteFiles(callbackQuery: CallbackQuery, user: Entity, remoteFiles: List<RemoteFile>, text: String) {
+        execute(EditMessageText().also { response ->
+            response.messageId = callbackQuery.message.messageId
+            response.text = text
+            response.chatId = callbackQuery.message.chatId.toString()
+            response.inlineMessageId = callbackQuery.inlineMessageId
+        })
 
-        if (fileList is SshBotFileList) {
-            if ((fileList as SshBotFileList).useArchive) {
-                buttons.add(InlineKeyboardButton("Aktiv").setCallbackData("main"))
-            } else {
-                buttons.add(InlineKeyboardButton("Archiv").setCallbackData("archive"))
-            }
-        }
-        buttons.add(InlineKeyboardButton("Drucken!").setCallbackData("print"))
+        RemoteHost.printRemoteFiles(user, remoteFiles)
+        RemoteFileStorage.delete(remoteFiles)
+
+        execute(SendMessage(callbackQuery.message.chatId, "Dateien wurden gedruckt!").also { response ->
+            response.replyToMessageId = callbackQuery.message.messageId
+        })
+    }
+
+
+    private fun getFilesKeyboard(remoteFiles: List<RemoteFile>): InlineKeyboardMarkup {
+        val buttons = remoteFiles.map {
+            InlineKeyboardButton("${if (it.selected) "☒" else "☐"} ${it.name}")
+                    .setCallbackData("toggle|${it.entity?.key?.id}")
+        }.plus(InlineKeyboardButton("Drucken!").setCallbackData("print"))
 
         return InlineKeyboardMarkup().also { it.keyboard = buttons.chunked(3) }
-    }
-
-
-    override fun onUpdateReceived(update: Update) {
-        processUpdate(update)?.let {
-            when (it) {
-                is SendMessage -> execute(it)
-                is SendChatAction -> execute(it)
-                is EditMessageText -> execute(it)
-                is EditMessageReplyMarkup -> execute(it)
-                else -> TODO("not implemented")
-            }
-        }
     }
 
     override fun getBotToken() = BOT_TOKEN

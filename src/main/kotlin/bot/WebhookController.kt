@@ -17,12 +17,6 @@ class WebhookController : HttpServlet() {
         val update = mapper.readValue(req.reader, Update::class.java)
         println(update)
 
-        val response = bot.processUpdate(update)
-        println(response)
-
-        resp.status = 200
-        resp.contentType = "application/json";
-        resp.characterEncoding = "UTF-8";
-        mapper.writeValue(resp.outputStream, response)
+        bot.onUpdateReceived(update)
     }
 }
