@@ -36,7 +36,7 @@ object RemoteHost {
         }
     }
 
-    fun printRemoteFiles(user: Entity, remoteFiles: List<RemoteFile>) {
+    fun printIliasResources(user: Entity, iliasResources: List<IliasResource>) {
         sshClient { client ->
             val tempDir = client.startSession().use { session ->
                 val command = session.exec("mktemp -d")
@@ -46,8 +46,8 @@ object RemoteHost {
             }
 
             val upload = client.newSCPFileTransfer().newSCPUploadClient()
-            val command = remoteFiles.filter { it.selected }.mapIndexed { index, file ->
-                val data = Ilias.download(file.url)
+            val command = iliasResources.filter { it.selected }.mapIndexed { index, resource ->
+                val data = Ilias.download(resource.url)
                 val tempFilename = "${tempDir.trim()}/$index"
                 upload.copy(object : InMemorySourceFile() {
                     override fun getLength(): Long {
@@ -55,7 +55,7 @@ object RemoteHost {
                     }
 
                     override fun getName(): String {
-                        return file.name
+                        return resource.name
                     }
 
                     override fun getInputStream(): InputStream {

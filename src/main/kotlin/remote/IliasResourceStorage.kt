@@ -6,10 +6,10 @@ import com.google.cloud.datastore.PathElement
 import com.google.cloud.datastore.Query
 import com.google.cloud.datastore.StructuredQuery
 
-object RemoteFileStorage {
-    fun get(user: Entity, chatId: Long, messageId: Int): List<RemoteFile> {
+object IliasResourceStorage {
+    fun get(user: Entity, chatId: Long, messageId: Int): List<IliasResource> {
         val query = Query.newEntityQueryBuilder()
-                .setKind("RemoteFile")
+                .setKind("IliasResource")
                 .setFilter(StructuredQuery.CompositeFilter.and(
                         StructuredQuery.PropertyFilter.hasAncestor(user.key),
                         StructuredQuery.PropertyFilter.eq("chatId", chatId),
@@ -18,36 +18,36 @@ object RemoteFileStorage {
         val results = datastore.run(query)
 
         return results.asSequence().map { entity ->
-            RemoteFile(entity.getString("type"), entity.getString("name"), entity.getString("url"),
+            IliasResource(entity.getString("type"), entity.getString("name"), entity.getString("url"),
                     entity.getBoolean("selected"), entity)
         }.sortedBy { it.name }.toList()
     }
 
 
     /**
-     * Saves the [RemoteFile]s. Call [updateMessage] to set the assosiated chat and message ids.
+     * Saves the [IliasResource]s. Call [updateMessage] to set the assosiated chat and message ids.
      */
-    fun save(user: Entity, remoteFiles: List<RemoteFile>) {
+    fun save(user: Entity, iliasResources: List<IliasResource>) {
         datastore.runInTransaction { transaction ->
-            remoteFiles.forEach { file ->
+            iliasResources.forEach { resource ->
                 val key = datastore.newKeyFactory()
                         .addAncestor(PathElement.of("User", user.key.name))
-                        .setKind("RemoteFile").newKey()
-                file.entity = transaction.put(Entity.newBuilder(key)
-                        .set("type", file.type)
-                        .set("name", file.name)
-                        .set("url", file.url)
-                        .set("selected", file.selected)
+                        .setKind("IliasResource").newKey()
+                resource.entity = transaction.put(Entity.newBuilder(key)
+                        .set("type", resource.type)
+                        .set("name", resource.name)
+                        .set("url", resource.url)
+                        .set("selected", resource.selected)
                         .set("lastUsed", Timestamp.now())
                         .build())
             }
         }
     }
 
-    fun updateMessage(chatId: Long, messageId: Int, remoteFiles: List<RemoteFile>) {
+    fun updateMessage(chatId: Long, messageId: Int, iliasResources: List<IliasResource>) {
         datastore.runInTransaction { transaction ->
-            remoteFiles.forEach { file ->
-                transaction.update(Entity.newBuilder(file.entity)
+            iliasResources.forEach { resource ->
+                transaction.update(Entity.newBuilder(resource.entity)
                         .set("chatId", chatId)
                         .set("messageId", messageId.toLong())
                         .build())
@@ -56,17 +56,17 @@ object RemoteFileStorage {
     }
 
 
-    fun updateSelected(file: RemoteFile) {
-        datastore.update(Entity.newBuilder(file.entity)
-                .set("selected", file.selected)
+    fun updateSelected(resource: IliasResource) {
+        datastore.update(Entity.newBuilder(resource.entity)
+                .set("selected", resource.selected)
                 .set("lastUsed", Timestamp.now())
                 .build())
     }
 
-    fun delete(remoteFiles: List<RemoteFile>) {
+    fun delete(iliasResources: List<IliasResource>) {
         datastore.runInTransaction { transaction ->
-            remoteFiles.forEach { file ->
-                transaction.delete(file.entity?.key)
+            iliasResources.forEach { resource ->
+                transaction.delete(resource.entity?.key)
             }
         }
     }

@@ -13,5 +13,5 @@ internal val datastore = DatastoreOptions.newBuilder()
                 else FileInputStream("src/main/webapp/WEB-INF/uniprintbot.json")))
         .build().service
 
-data class RemoteFile(val type: String, val name: String, val url: String,
-                      var selected: Boolean = false, var entity: Entity? = null)
+data class IliasResource(val type: String, val name: String, val url: String,
+                         var selected: Boolean = false, var entity: Entity? = null)

@@ -44,13 +44,13 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                 message.text == "/statistik" -> {
                     execute(SendChatAction(message.chatId, "typing"))
 
-                    val remoteFiles = Ilias.listFiles("statistik", ILIAS_PAGE_ID)
-                    RemoteFileStorage.save(user, remoteFiles)
+                    val iliasResources = Ilias.listIliasResources("statistik", ILIAS_PAGE_ID)
+                    IliasResourceStorage.save(user, iliasResources)
 
                     val response = execute(SendMessage(message.chatId, "Welche Dateien sollen gedruckt werden?").also { response ->
-                        response.replyMarkup = getFilesKeyboard(remoteFiles)
+                        response.replyMarkup = getIliasResourcesKeyboard(iliasResources)
                     })
-                    RemoteFileStorage.updateMessage(response.chatId, response.messageId, remoteFiles)
+                    IliasResourceStorage.updateMessage(response.chatId, response.messageId, iliasResources)
                 }
                 else -> execute(SendMessage(message.chatId, "Ich habe dich leider nicht verstanden."))
             }
@@ -75,14 +75,14 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     private fun processCallbackQuery(callbackQuery: CallbackQuery, user: Entity) {
         val split = callbackQuery.data.split("|")
         if (split[0] == "print") {
-            val remoteFiles = RemoteFileStorage.get(user, callbackQuery.message.chatId, callbackQuery.message.messageId)
-            val selected = remoteFiles.filter { it.selected }
+            val iliasResources = IliasResourceStorage.get(user, callbackQuery.message.chatId, callbackQuery.message.messageId)
+            val selected = iliasResources.filter { it.selected }
             when (selected.size) {
                 0 -> execute(AnswerCallbackQuery().also { it.callbackQueryId = callbackQuery.id })
-                1 -> printRemoteFiles(callbackQuery, user, remoteFiles, "${selected.single().name} wird gedruckt...")
+                1 -> printIliasResources(callbackQuery, user, iliasResources, "${selected.single().name} wird gedruckt...")
                 else -> {
-                    val first = selected.dropLast(1).joinToString(", ", transform = RemoteFile::name)
-                    printRemoteFiles(callbackQuery, user, remoteFiles, "$first und ${selected.last().name} werden gedruckt...")
+                    val first = selected.dropLast(1).joinToString(", ", transform = IliasResource::name)
+                    printIliasResources(callbackQuery, user, iliasResources, "$first und ${selected.last().name} werden gedruckt...")
                 }
             }
 
@@ -102,18 +102,18 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                     response.replyToMessageId = callbackQuery.message.replyToMessage.messageId
                 })
             } else if (split[0] == "toggle") {
-                val fileId = split[1].toLong()
-                val remoteFiles = RemoteFileStorage.get(user, callbackQuery.message.chatId, callbackQuery.message.messageId)
+                val resourceId = split[1].toLong()
+                val iliasResources = IliasResourceStorage.get(user, callbackQuery.message.chatId, callbackQuery.message.messageId)
 
-                remoteFiles.firstOrNull { it.entity?.key?.id == fileId }?.let { file ->
-                    file.selected = !file.selected
-                    RemoteFileStorage.updateSelected(file)
+                iliasResources.firstOrNull { it.entity?.key?.id == resourceId }?.let { resource ->
+                    resource.selected = !resource.selected
+                    IliasResourceStorage.updateSelected(resource)
                 }
 
                 execute(EditMessageReplyMarkup().also { response ->
                     response.messageId = callbackQuery.message.messageId
                     response.chatId = callbackQuery.message.chatId.toString()
-                    response.replyMarkup = getFilesKeyboard(remoteFiles)
+                    response.replyMarkup = getIliasResourcesKeyboard(iliasResources)
                 })
                 execute(AnswerCallbackQuery().setCallbackQueryId(callbackQuery.id))
             }
@@ -122,7 +122,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         // ignore unknown or invalid stuff
     }
 
-    private fun printRemoteFiles(callbackQuery: CallbackQuery, user: Entity, remoteFiles: List<RemoteFile>, text: String) {
+    private fun printIliasResources(callbackQuery: CallbackQuery, user: Entity, iliasResources: List<IliasResource>, text: String) {
         execute(EditMessageText().also { response ->
             response.messageId = callbackQuery.message.messageId
             response.text = text
@@ -130,8 +130,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             response.inlineMessageId = callbackQuery.inlineMessageId
         })
 
-        RemoteHost.printRemoteFiles(user, remoteFiles)
-        RemoteFileStorage.delete(remoteFiles)
+        RemoteHost.printIliasResources(user, iliasResources)
+        IliasResourceStorage.delete(iliasResources)
 
         execute(SendMessage(callbackQuery.message.chatId, "Dateien wurden gedruckt!").also { response ->
             response.replyToMessageId = callbackQuery.message.messageId
@@ -139,8 +139,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     }
 
 
-    private fun getFilesKeyboard(remoteFiles: List<RemoteFile>): InlineKeyboardMarkup {
-        val buttons = remoteFiles.map {
+    private fun getIliasResourcesKeyboard(iliasResources: List<IliasResource>): InlineKeyboardMarkup {
+        val buttons = iliasResources.map {
             InlineKeyboardButton("${if (it.selected) "☒" else "☐"} ${it.name}")
                     .setCallbackData("toggle|${it.entity?.key?.id}")
         }.plus(InlineKeyboardButton("Drucken!").setCallbackData("print"))

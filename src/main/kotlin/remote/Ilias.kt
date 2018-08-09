@@ -19,7 +19,7 @@ object Ilias {
                     .cookieJar(CookieStore()).build())
             .build().create(IliasAPI::class.java)
 
-    fun listFiles(type: String, pageId: String): List<RemoteFile> {
+    fun listIliasResources(type: String, pageId: String): List<IliasResource> {
         var response = ilias.listPage(pageId, pageId).execute()
         if (response.body()?.contains("Übungsblätter") != true) {
             ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
@@ -28,13 +28,13 @@ object Ilias {
 
         val matcher = Pattern.compile("""<div class="form-group">\s*<div[^>]*>(.*\.pdf)</div>\s*<div[^>]*>\s*<a href="([^"]*)"[^>]*>Download</a>\s*</div>\s*</div>""")
                 .matcher(response.body())
-        val files = mutableListOf<RemoteFile>()
+        val iliasResources = mutableListOf<IliasResource>()
         while (matcher.find()) {
-            files.add(RemoteFile(type, matcher.group(1),
+            iliasResources.add(IliasResource(type, matcher.group(1),
                     matcher.group(2).replace("&amp;", "&")))
         }
 
-        return files
+        return iliasResources
     }
 
     fun download(url: String): ByteArray {
