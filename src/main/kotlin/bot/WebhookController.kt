@@ -10,7 +10,9 @@ import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/$BOT_PATH")
 class WebhookController : HttpServlet() {
-    private val bot = UniPrintBot()
+    companion object WebhookController {
+        internal val bot = UniPrintBot()
+    }
 
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
         val mapper = ObjectMapper()
