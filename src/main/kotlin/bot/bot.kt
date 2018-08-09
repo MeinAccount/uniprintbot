@@ -38,10 +38,22 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
     private fun processMessage(message: Message, user: Entity) {
         if (message.hasText()) {
-            when { // process commands
-                message.text == "/start" ->
-                    execute(SendMessage(message.chatId, "Sende mir eine PDF-Datei oder drucke Statistik-Blätter mit /statistik."))
-                message.text == "/statistik" -> {
+            when (message.text.toLowerCase()) { // process commands
+                "/start" ->
+                    execute(SendMessage(message.chatId,
+                            "Sende mir eine PDF-Datei oder drucke Statistik-Blätter mit /statistik.\n" +
+                                    "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken."))
+                "/print" ->
+                    if (message.isReply && message.replyToMessage.hasDocument() &&
+                            message.replyToMessage.document.fileName.endsWith(".pdf")) {
+                        execute(SendChatAction(message.chatId, "typing"))
+                        printTelegrammFile(message, user, message.replyToMessage.document.fileId)
+                    } else {
+                        execute(SendMessage(message.chatId,
+                                "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken."))
+                    }
+
+                "/statistik" -> {
                     execute(SendChatAction(message.chatId, "typing"))
 
                     val iliasResources = Ilias.listIliasResources("statistik", ILIAS_PAGE_ID)
@@ -95,12 +107,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                     response.chatId = callbackQuery.message.chatId.toString()
                 })
 
-                val file = execute(GetFile().also { it.fileId = split[1] })
-                RemoteHost.printTelegramFile(user, file)
-
-                execute(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!").also { response ->
-                    response.replyToMessageId = callbackQuery.message.replyToMessage.messageId
-                })
+                printTelegrammFile(callbackQuery.message, user, split[1])
             } else if (split[0] == "toggle") {
                 val resourceId = split[1].toLong()
                 val iliasResources = IliasResourceStorage.get(user, callbackQuery.message.chatId, callbackQuery.message.messageId)
@@ -120,6 +127,16 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         }
 
         // ignore unknown or invalid stuff
+    }
+
+
+    private fun printTelegrammFile(message: Message, user: Entity, fileId: String) {
+        val file = execute(GetFile().also { it.fileId = fileId })
+        RemoteHost.printTelegramFile(user, file)
+
+        execute(SendMessage(message.chatId, "Datei wurde gedruckt!").also { response ->
+            response.replyToMessageId = message.replyToMessage.messageId
+        })
     }
 
     private fun printIliasResources(callbackQuery: CallbackQuery, user: Entity, iliasResources: List<IliasResource>, text: String) {
