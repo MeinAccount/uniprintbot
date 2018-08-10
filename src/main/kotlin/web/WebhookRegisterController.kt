@@ -1,4 +1,4 @@
-package bot
+package web
 
 import BOT_PATH
 import BOT_TOKEN

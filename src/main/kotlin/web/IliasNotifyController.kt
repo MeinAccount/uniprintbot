@@ -1,4 +1,4 @@
-package bot
+package web
 
 import ILIAS_PAGE_ID
 import org.telegram.telegrambots.api.methods.send.SendDocument

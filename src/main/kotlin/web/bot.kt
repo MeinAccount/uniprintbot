@@ -1,4 +1,4 @@
-package bot
+package web
 
 import BOT_TOKEN
 import ILIAS_PAGE_ID

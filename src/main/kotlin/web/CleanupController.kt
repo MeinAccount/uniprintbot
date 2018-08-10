@@ -1,4 +1,4 @@
-package bot
+package web
 
 import com.google.cloud.Timestamp
 import com.google.cloud.datastore.Query

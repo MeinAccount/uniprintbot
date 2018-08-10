@@ -1,4 +1,4 @@
-package bot
+package web
 
 import BOT_PATH
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -10,7 +10,7 @@ import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/$BOT_PATH")
 class WebhookController : HttpServlet() {
-    companion object WebhookController {
+    companion object {
         internal val bot = UniPrintBot()
     }
 
