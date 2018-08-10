@@ -46,5 +46,9 @@ class IliasNotifyController : HttpServlet() {
             }
         }
     }
+
+    override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
+        doGet(req, resp)
+    }
 }
 

@@ -2,6 +2,8 @@ package bot
 
 import BOT_TOKEN
 import ILIAS_PAGE_ID
+import com.google.appengine.api.taskqueue.QueueFactory
+import com.google.appengine.api.taskqueue.TaskOptions
 import com.google.cloud.datastore.Entity
 import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
 import org.telegram.telegrambots.api.methods.GetFile
@@ -70,6 +72,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                     })
                     IliasResourceStorage.updateMessage(response.chatId, response.messageId, iliasResources)
                 }
+                "/recheck" -> QueueFactory.getDefaultQueue().add(TaskOptions.Builder.withUrl("/ilias/notify"))
+
                 else -> execute(SendMessage(message.chatId, "Ich habe dich leider nicht verstanden."))
             }
 
@@ -103,8 +107,6 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                         printIliasResources(callbackQuery, user, iliasResources, "$first und ${selected.last().name} werden gedruckt...")
                     }
                 }
-
-                return
             }
 
             callbackQuery.data == "printTelegramFile" ->
