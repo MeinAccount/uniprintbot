@@ -17,16 +17,31 @@ object UserStorage {
             .build()).iterator()
 
 
-    fun saveUpload(user: Entity, document: Document) {
+    fun logPrintJob(user: Entity, resource: IliasResource) {
         val key = datastore.newKeyFactory()
                 .addAncestor(PathElement.of("User", user.key.name))
-                .setKind("Upload").newKey()
+                .setKind("PrintJob").newKey()
 
         datastore.add(Entity.newBuilder(key)
+                .set("kind", "iliasResource")
+                .set("type", resource.type)
+                .set("fileName", resource.name)
+                .set("fileUrl", resource.url)
+                .set("time", Timestamp.now())
+                .build())
+    }
+
+    fun logPrintJob(user: Entity, document: Document) {
+        val key = datastore.newKeyFactory()
+                .addAncestor(PathElement.of("User", user.key.name))
+                .setKind("PrintJob").newKey()
+
+        datastore.add(Entity.newBuilder(key)
+                .set("kind", "telegramFile")
                 .set("fileId", document.fileId)
                 .set("fileName", document.fileName)
                 .set("fileSize", document.fileSize.toLong())
-                .set("timestamp", Timestamp.now())
+                .set("time", Timestamp.now())
                 .build())
     }
 }

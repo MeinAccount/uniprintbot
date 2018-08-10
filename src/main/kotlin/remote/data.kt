@@ -14,4 +14,6 @@ internal val datastore = DatastoreOptions.newBuilder()
         .build().service
 
 data class IliasResource(val type: String, val name: String, val url: String,
-                         var selected: Boolean = false, var entity: Entity? = null)
+                         var selected: Boolean = false, var entity: Entity? = null) {
+    fun getPrintName() = "${type.capitalize()} $name"
+}
