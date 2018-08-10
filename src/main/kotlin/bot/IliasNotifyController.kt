@@ -4,6 +4,7 @@ import ILIAS_PAGE_ID
 import org.telegram.telegrambots.api.methods.send.SendDocument
 import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboardButton
+import org.telegram.telegrambots.exceptions.TelegramApiException
 import remote.Ilias
 import remote.IliasResource
 import remote.UserIliasNotificationStorage
@@ -34,14 +35,18 @@ class IliasNotifyController : HttpServlet() {
                         .setCallbackData("printTelegramFile")))
 
                 resourceToTelegramFileId.compute(resource) { _, fileId ->
-                    val command = SendDocument().setChatId(user.key.name).setReplyMarkup(keyboard)
-                    if (fileId == null) { // upload file to Telegram
-                        command.setNewDocument(name, Ilias.download(resource.url).inputStream())
-                    }
+                    try {
+                        val command = SendDocument().setChatId(user.key.name).setReplyMarkup(keyboard)
+                        if (fileId == null) { // upload file to Telegram
+                            command.setNewDocument(name, Ilias.download(resource.url).inputStream())
+                        }
 
-                    val message = WebhookController.bot.sendDocument(command)
-                    UserIliasNotificationStorage.add(user, message.chatId, message.messageId, resource)
-                    return@compute message.document.fileId
+                        val message = WebhookController.bot.sendDocument(command)
+                        UserIliasNotificationStorage.add(user, message.chatId, message.messageId, resource)
+                        return@compute message.document.fileId
+                    } catch (e: TelegramApiException) {
+                        return@compute fileId
+                    }
                 }
             }
         }

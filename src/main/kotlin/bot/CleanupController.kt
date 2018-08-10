@@ -4,7 +4,6 @@ import com.google.cloud.Timestamp
 import com.google.cloud.datastore.Query
 import com.google.cloud.datastore.StructuredQuery
 import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageText
-import org.telegram.telegrambots.exceptions.TelegramApiException
 import remote.datastore
 import java.time.LocalDateTime
 import javax.servlet.annotation.HttpConstraint
@@ -31,15 +30,10 @@ class CleanupController : HttpServlet() {
             println(entity)
 
             if (processed.add(chatId to messageId)) {
-                try {
-                    WebhookController.bot.execute(EditMessageText().also { update ->
-                        update.chatId = chatId.toString()
-                        update.messageId = messageId.toInt()
-                        update.text = "Abgebrochen"
-                    })
-                } catch (e: TelegramApiException) {
-                    println(e)
-                }
+                WebhookController.bot.executeSafe(EditMessageText()
+                        .setChatId(chatId.toString())
+                        .setMessageId(messageId.toInt())
+                        .setText("Abgebrochen"))
             }
 
             datastore.delete(entity.key)

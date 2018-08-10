@@ -6,6 +6,7 @@ import com.google.appengine.api.taskqueue.QueueFactory
 import com.google.appengine.api.taskqueue.TaskOptions
 import com.google.cloud.datastore.Entity
 import org.telegram.telegrambots.api.methods.AnswerCallbackQuery
+import org.telegram.telegrambots.api.methods.BotApiMethod
 import org.telegram.telegrambots.api.methods.GetFile
 import org.telegram.telegrambots.api.methods.send.SendChatAction
 import org.telegram.telegrambots.api.methods.send.SendMessage
@@ -18,7 +19,9 @@ import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
+import org.telegram.telegrambots.exceptions.TelegramApiException
 import remote.*
+import java.io.Serializable
 
 open class PollingUniPrintBot : TelegramLongPollingBot() {
     override fun onUpdateReceived(update: Update) {
@@ -52,7 +55,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                         execute(SendChatAction(message.chatId, "typing"))
 
                         printTelegramFile(user, message.replyToMessage.document)
-                        execute(SendMessage(message.chatId, "Datei wurde gedruckt!")
+                        executeSafe(SendMessage(message.chatId, "Datei wurde gedruckt!")
                                 .setReplyToMessageId(message.replyToMessage.messageId))
                     } else {
                         execute(SendMessage(message.chatId,
@@ -115,7 +118,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                             .setMessageId(callbackQuery.message.messageId))
 
                     printTelegramFile(user, callbackQuery.message.document)
-                    execute(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!")
+                    executeSafe(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!")
                             .setReplyToMessageId(callbackQuery.message.messageId))
                 } else if (callbackQuery.message.isReply && callbackQuery.message.replyToMessage.hasDocument()) {
                     execute(EditMessageText().setChatId(callbackQuery.message.chatId)
@@ -123,7 +126,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                             .setText("Datei wird gedruckt..."))
 
                     printTelegramFile(user, callbackQuery.message.replyToMessage.document)
-                    execute(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!")
+                    executeSafe(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!")
                             .setReplyToMessageId(callbackQuery.message.replyToMessage.messageId))
                 }
 
@@ -169,8 +172,18 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         IliasResourceStorage.delete(iliasResources)
         iliasResources.filter { it.selected }.forEach { UserStorage.logPrintJob(user, it) }
 
-        execute(SendMessage(callbackQuery.message.chatId, "Dateien wurden gedruckt!")
+        executeSafe(SendMessage(callbackQuery.message.chatId, "Dateien wurden gedruckt!")
                 .setReplyToMessageId(callbackQuery.message.messageId))
+    }
+
+    fun <T : Serializable, Method : BotApiMethod<T>> executeSafe(method: Method): T? {
+        try {
+            return execute(method)
+        } catch (e: TelegramApiException) {
+            System.err.println(e)
+        }
+
+        return null
     }
 
 
