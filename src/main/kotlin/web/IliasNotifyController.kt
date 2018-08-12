@@ -36,7 +36,10 @@ class IliasNotifyController : HttpServlet() {
 
                 resourceToTelegramFileId.compute(resource) { _, fileId ->
                     try {
-                        val command = SendDocument().setChatId(user.key.name).setReplyMarkup(keyboard)
+                        val command = SendDocument()
+                                .setChatId(user.key.name)
+                                .setReplyMarkup(keyboard)
+                                .setDocument(fileId)
                         if (fileId == null) { // upload file to Telegram
                             command.setNewDocument(name, Ilias.download(resource.url).inputStream())
                         }

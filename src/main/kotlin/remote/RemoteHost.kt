@@ -62,6 +62,7 @@ object RemoteHost {
                         return data.inputStream()
                     }
                 }, tempFilename)
+
                 return@mapIndexed tempFilename
             }.joinToString("; ") { printCommand(it, user) }
 

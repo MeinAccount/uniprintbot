@@ -12,10 +12,10 @@ import javax.servlet.http.HttpServletResponse
 class WebhookController : HttpServlet() {
     companion object {
         internal val bot = UniPrintBot()
+        private val mapper = ObjectMapper()
     }
 
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
-        val mapper = ObjectMapper()
         val update = mapper.readValue(req.reader, Update::class.java)
         println(update)
 

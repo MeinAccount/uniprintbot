@@ -17,11 +17,11 @@ import javax.servlet.http.HttpServletResponse
 @ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
 class CleanupController : HttpServlet() {
     override fun doGet(req: HttpServletRequest?, resp: HttpServletResponse?) {
+        val weekAgo = java.sql.Timestamp.valueOf(LocalDateTime.now().minusDays(7))
         val query = Query.newEntityQueryBuilder()
                 .setKind("IliasResource")
                 .setFilter(StructuredQuery.PropertyFilter.le("lastUsed",
-                        Timestamp.of(java.sql.Timestamp.valueOf(LocalDateTime.now().minusDays(7)))
-                )).build()
+                        Timestamp.of(weekAgo))).build()
 
         val processed = mutableSetOf<Pair<Long, Long>>()
         datastore.run(query).forEach { entity ->

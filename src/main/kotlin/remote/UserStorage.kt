@@ -8,8 +8,9 @@ import com.google.cloud.datastore.StructuredQuery
 import org.telegram.telegrambots.api.objects.Document
 
 object UserStorage {
-    private val userKeys = datastore.newKeyFactory().setKind("User")
-    fun getUser(userId: Int): Entity? = datastore.get(userKeys.newKey(userId.toString()))
+    fun getUser(userId: Int): Entity? = datastore.get(datastore.newKeyFactory()
+            .setKind("User")
+            .newKey(userId.toString()))
 
     fun listNotifyUsers() = datastore.run(Query.newEntityQueryBuilder()
             .setKind("User")
@@ -21,7 +22,6 @@ object UserStorage {
         val key = datastore.newKeyFactory()
                 .addAncestor(PathElement.of("User", user.key.name))
                 .setKind("PrintJob").newKey()
-
         datastore.add(Entity.newBuilder(key)
                 .set("kind", "iliasResource")
                 .set("type", resource.type)
@@ -35,7 +35,6 @@ object UserStorage {
         val key = datastore.newKeyFactory()
                 .addAncestor(PathElement.of("User", user.key.name))
                 .setKind("PrintJob").newKey()
-
         datastore.add(Entity.newBuilder(key)
                 .set("kind", "telegramFile")
                 .set("fileId", document.fileId)

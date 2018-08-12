@@ -95,7 +95,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
     private fun processCallbackQuery(callbackQuery: CallbackQuery, user: Entity) {
         when {
-            callbackQuery.data == "printIliasFiles" -> {
+            callbackQuery.data == "printIliasResources" -> {
                 val iliasResources = IliasResourceStorage.get(user,
                         callbackQuery.message.chatId, callbackQuery.message.messageId)
 
@@ -137,8 +137,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
                 iliasResources.firstOrNull { it.entity?.key?.id == resourceId }?.let { resource ->
                     resource.selected = !resource.selected
-                    IliasResourceStorage.updateSelected(resource)
                 }
+                IliasResourceStorage.updateSelected(iliasResources)
 
                 execute(EditMessageReplyMarkup()
                         .setChatId(callbackQuery.message.chatId)
@@ -191,7 +191,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         val buttons = iliasResources.map {
             InlineKeyboardButton("${if (it.selected) "☒" else "☐"} ${it.name}")
                     .setCallbackData("toggle|${it.entity?.key?.id}")
-        }.plus(InlineKeyboardButton("Drucken!").setCallbackData("printIliasFiles"))
+        }.plus(InlineKeyboardButton("Drucken!").setCallbackData("printIliasResources"))
 
         return InlineKeyboardMarkup().setKeyboard(buttons.chunked(3))
     }

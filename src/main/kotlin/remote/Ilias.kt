@@ -38,7 +38,7 @@ object Ilias {
     }
 
     fun download(url: String): ByteArray {
-        return ilias.download(url).execute().body()!!.source().readByteArray()
+        return ilias.download(url).execute().body()!!.bytes()
     }
 
 
@@ -53,7 +53,6 @@ object Ilias {
         fun listPage(@Query("ref_id") ref_id: String,
                      @Query("target") target: String): Call<String>
 
-        @Streaming // TODO?
         @GET
         fun download(@Url url: String): Call<ResponseBody>
     }

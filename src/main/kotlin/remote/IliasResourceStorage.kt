@@ -18,8 +18,8 @@ object IliasResourceStorage {
         val results = datastore.run(query)
 
         return results.asSequence().map { entity ->
-            IliasResource(entity.getString("type"), entity.getString("name"), entity.getString("url"),
-                    entity.getBoolean("selected"), entity)
+            IliasResource(entity.getString("type"), entity.getString("name"),
+                    entity.getString("url"), entity.getBoolean("selected"), entity)
         }.sortedBy { it.name }.toList()
     }
 
@@ -56,18 +56,20 @@ object IliasResourceStorage {
     }
 
 
-    fun updateSelected(resource: IliasResource) {
-        datastore.update(Entity.newBuilder(resource.entity)
-                .set("selected", resource.selected)
-                .set("lastUsed", Timestamp.now())
-                .build())
+    fun updateSelected(iliasResources: List<IliasResource>) {
+        datastore.runInTransaction { transaction ->
+            iliasResources.forEach { resource ->
+                transaction.update(Entity.newBuilder(resource.entity)
+                        .set("selected", resource.selected)
+                        .set("lastUsed", Timestamp.now())
+                        .build())
+            }
+        }
     }
 
     fun delete(iliasResources: List<IliasResource>) {
         datastore.runInTransaction { transaction ->
-            iliasResources.forEach { resource ->
-                transaction.delete(resource.entity?.key)
-            }
+            iliasResources.mapNotNull { it.entity?.key }.forEach { transaction.delete(it) }
         }
     }
 }
