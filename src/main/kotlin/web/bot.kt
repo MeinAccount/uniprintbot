@@ -21,6 +21,7 @@ import org.telegram.telegrambots.api.objects.replykeyboard.buttons.InlineKeyboar
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.exceptions.TelegramApiException
 import remote.*
+import java.io.IOException
 import java.io.Serializable
 
 open class PollingUniPrintBot : TelegramLongPollingBot() {
@@ -51,8 +52,12 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                                     "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken."))
                 "/cancel" -> {
                     execute(SendChatAction(message.chatId, "typing"))
-                    RemoteHost.cancelAll()
-                    executeSafe(SendMessage(message.chatId, "Alle Druckaufträge wurden abgebrochen."))
+                    try {
+                        RemoteHost.cancelAll()
+                        executeSafe(SendMessage(message.chatId, "Alle Druckaufträge wurden abgebrochen."))
+                    } catch (e: IOException) {
+                        executeSafe(SendMessage(message.chatId, "Das Abbrechen aller Druckaufträge ist leider fehlgeschlagen! IOException"))
+                    }
                 }
 
                 "/print" ->
@@ -60,9 +65,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                             validateTelegramFile(message.replyToMessage.document)) {
                         execute(SendChatAction(message.chatId, "typing"))
 
-                        printTelegramFile(user, message.replyToMessage.document)
-                        executeSafe(SendMessage(message.chatId, "Datei wurde gedruckt!")
-                                .setReplyToMessageId(message.replyToMessage.messageId))
+                        printTelegramFile(user, message.replyToMessage.document, message)
                     } else {
                         execute(SendMessage(message.chatId,
                                 "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken."))
@@ -123,17 +126,13 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                     executeSafe(EditMessageReplyMarkup().setChatId(callbackQuery.message.chatId)
                             .setMessageId(callbackQuery.message.messageId))
 
-                    printTelegramFile(user, callbackQuery.message.document)
-                    executeSafe(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!")
-                            .setReplyToMessageId(callbackQuery.message.messageId))
+                    printTelegramFile(user, callbackQuery.message.document, callbackQuery.message)
                 } else if (callbackQuery.message.isReply && callbackQuery.message.replyToMessage.hasDocument()) {
                     executeSafe(EditMessageText().setChatId(callbackQuery.message.chatId)
                             .setMessageId(callbackQuery.message.messageId)
                             .setText("Datei wird gedruckt..."))
 
-                    printTelegramFile(user, callbackQuery.message.replyToMessage.document)
-                    executeSafe(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!")
-                            .setReplyToMessageId(callbackQuery.message.replyToMessage.messageId))
+                    printTelegramFile(user, callbackQuery.message.replyToMessage.document, callbackQuery.message)
                 }
 
             callbackQuery.data.startsWith("toggle|") -> {
@@ -161,10 +160,24 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     private fun validateTelegramFile(document: Document) =
             document.fileName.endsWith(".pdf") && document.mimeType == "application/pdf"
 
-    private fun printTelegramFile(user: Entity, document: Document) {
-        val file = execute(GetFile().setFileId(document.fileId))
-        RemoteHost.printTelegramFile(user, file)
-        UserStorage.logPrintJob(user, document)
+    private fun printTelegramFile(user: Entity, document: Document, message: Message) {
+        val replyTo = message.replyToMessage?.messageId ?: message.messageId
+        try {
+            val file = execute(GetFile().setFileId(document.fileId))
+            UserStorage.logPrintJob(user, document)
+
+            RemoteHost.printTelegramFile(user, file)
+            executeSafe(SendMessage(message.chatId, "Datei wurde gedruckt!")
+                    .setReplyToMessageId(replyTo))
+        } catch (e: TelegramApiException) {
+            e.printStackTrace()
+            executeSafe(SendMessage(message.chatId, "Drucken leider fehlgeschlagen! Konnte Datei nicht von Telegram abrufen.")
+                    .setReplyToMessageId(replyTo))
+        } catch (e: IOException) {
+            e.printStackTrace()
+            executeSafe(SendMessage(message.chatId, "Drucken leider fehlgeschlagen! IOException")
+                    .setReplyToMessageId(replyTo))
+        }
     }
 
     private fun printIliasResources(callbackQuery: CallbackQuery, user: Entity,
@@ -173,20 +186,25 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                 .setChatId(callbackQuery.message.chatId)
                 .setMessageId(callbackQuery.message.messageId)
                 .setText(text))
-
-        RemoteHost.printIliasResources(user, iliasResources)
-        IliasResourceStorage.delete(iliasResources)
         iliasResources.filter { it.selected }.forEach { UserStorage.logPrintJob(user, it) }
+        IliasResourceStorage.delete(iliasResources)
 
-        executeSafe(SendMessage(callbackQuery.message.chatId, "Dateien wurden gedruckt!")
-                .setReplyToMessageId(callbackQuery.message.messageId))
+        try {
+            RemoteHost.printIliasResources(user, iliasResources)
+            executeSafe(SendMessage(callbackQuery.message.chatId, "Dateien wurden gedruckt!")
+                    .setReplyToMessageId(callbackQuery.message.messageId))
+        } catch (e: IOException) {
+            e.printStackTrace()
+            executeSafe(SendMessage(callbackQuery.message.chatId, "Drucken leider fehlgeschlagen! IOException")
+                    .setReplyToMessageId(callbackQuery.message.messageId))
+        }
     }
 
     fun <T : Serializable, Method : BotApiMethod<T>> executeSafe(method: Method): T? {
         try {
             return execute(method)
         } catch (e: TelegramApiException) {
-            System.err.println(e)
+            e.printStackTrace()
         }
 
         return null

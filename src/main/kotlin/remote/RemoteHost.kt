@@ -16,6 +16,8 @@ import java.util.concurrent.TimeUnit
 object RemoteHost {
     private fun <T> sshClient(run: (SSHClient) -> T) = SSHClient().use { sshClient ->
         sshClient.addHostKeyVerifier(PromiscuousVerifier())
+        sshClient.timeout = 30
+        sshClient.connectTimeout = 30000
         sshClient.connect(SSH_HOST)
         sshClient.authPassword(SSH_USER, SSH_PASSWORD)
         run(sshClient)
