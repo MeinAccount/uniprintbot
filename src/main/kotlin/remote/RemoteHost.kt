@@ -71,4 +71,12 @@ object RemoteHost {
             }
         }
     }
+
+    fun cancelAll() {
+        sshClient { client ->
+            client.startSession().use { session ->
+                session.exec("cancel -a -x").join(5, TimeUnit.SECONDS)
+            }
+        }
+    }
 }

@@ -49,6 +49,12 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                     execute(SendMessage(message.chatId,
                             "Sende mir eine PDF-Datei oder drucke Statistik-Blätter mit /statistik.\n" +
                                     "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken."))
+                "/cancel" -> {
+                    execute(SendChatAction(message.chatId, "typing"))
+                    RemoteHost.cancelAll()
+                    executeSafe(SendMessage(message.chatId, "Alle Druckaufträge wurden abgebrochen."))
+                }
+
                 "/print" ->
                     if (message.isReply && message.replyToMessage.hasDocument() &&
                             validateTelegramFile(message.replyToMessage.document)) {
