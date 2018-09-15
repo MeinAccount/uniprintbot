@@ -114,14 +114,14 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
             callbackQuery.data == "printTelegramFile" ->
                 if (callbackQuery.message.hasDocument()) {
-                    execute(EditMessageReplyMarkup().setChatId(callbackQuery.message.chatId)
+                    executeSafe(EditMessageReplyMarkup().setChatId(callbackQuery.message.chatId)
                             .setMessageId(callbackQuery.message.messageId))
 
                     printTelegramFile(user, callbackQuery.message.document)
                     executeSafe(SendMessage(callbackQuery.message.chatId, "Datei wurde gedruckt!")
                             .setReplyToMessageId(callbackQuery.message.messageId))
                 } else if (callbackQuery.message.isReply && callbackQuery.message.replyToMessage.hasDocument()) {
-                    execute(EditMessageText().setChatId(callbackQuery.message.chatId)
+                    executeSafe(EditMessageText().setChatId(callbackQuery.message.chatId)
                             .setMessageId(callbackQuery.message.messageId)
                             .setText("Datei wird gedruckt..."))
 
@@ -140,11 +140,11 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                 }
                 IliasResourceStorage.updateSelected(iliasResources)
 
-                execute(EditMessageReplyMarkup()
+                executeSafe(AnswerCallbackQuery().setCallbackQueryId(callbackQuery.id))
+                executeSafe(EditMessageReplyMarkup()
                         .setChatId(callbackQuery.message.chatId)
                         .setMessageId(callbackQuery.message.messageId)
                         .setReplyMarkup(getIliasResourcesKeyboard(iliasResources)))
-                execute(AnswerCallbackQuery().setCallbackQueryId(callbackQuery.id))
             }
         }
 
@@ -163,7 +163,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
     private fun printIliasResources(callbackQuery: CallbackQuery, user: Entity,
                                     iliasResources: List<IliasResource>, text: String) {
-        execute(EditMessageText()
+        executeSafe(EditMessageText()
                 .setChatId(callbackQuery.message.chatId)
                 .setMessageId(callbackQuery.message.messageId)
                 .setText(text))
