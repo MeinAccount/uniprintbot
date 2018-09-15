@@ -33,10 +33,12 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             } else {
                 processMessage(update.message, user)
             }
+
         } else if (update.hasCallbackQuery()) {
             val user = UserStorage.getUser(update.callbackQuery.from.id)
             if (user == null) {
-                execute(SendMessage(update.message.chatId, "Permission Denied for user ${update.callbackQuery.from.id}"))
+                execute(SendMessage(update.message.chatId,
+                        "Permission Denied for user ${update.callbackQuery.from.id}"))
             } else {
                 processCallbackQuery(update.callbackQuery, user)
             }
@@ -51,20 +53,19 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                             "Sende mir eine PDF-Datei oder drucke Statistik-Blätter mit /statistik.\n" +
                                     "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken."))
                 "/cancel" -> {
-                    execute(SendChatAction(message.chatId, "typing"))
                     try {
+                        execute(SendChatAction(message.chatId, "typing"))
                         RemoteHost.cancelAll()
                         executeSafe(SendMessage(message.chatId, "Alle Druckaufträge wurden abgebrochen."))
                     } catch (e: IOException) {
-                        executeSafe(SendMessage(message.chatId, "Das Abbrechen aller Druckaufträge ist leider fehlgeschlagen! IOException"))
+                        executeSafe(SendMessage(message.chatId,
+                                "Das Abbrechen aller Druckaufträge ist leider fehlgeschlagen! IOException"))
                     }
                 }
 
                 "/print" ->
                     if (message.isReply && message.replyToMessage.hasDocument() &&
                             validateTelegramFile(message.replyToMessage.document)) {
-                        execute(SendChatAction(message.chatId, "typing"))
-
                         printTelegramFile(user, message.replyToMessage.document, message)
                     } else {
                         execute(SendMessage(message.chatId,
@@ -161,7 +162,9 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             document.fileName.endsWith(".pdf") && document.mimeType == "application/pdf"
 
     private fun printTelegramFile(user: Entity, document: Document, message: Message) {
+        execute(SendChatAction(message.chatId, "typing"))
         val replyTo = message.replyToMessage?.messageId ?: message.messageId
+
         try {
             val file = execute(GetFile().setFileId(document.fileId))
             UserStorage.logPrintJob(user, document)
@@ -171,7 +174,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                     .setReplyToMessageId(replyTo))
         } catch (e: TelegramApiException) {
             e.printStackTrace()
-            executeSafe(SendMessage(message.chatId, "Drucken leider fehlgeschlagen! Konnte Datei nicht von Telegram abrufen.")
+            executeSafe(SendMessage(message.chatId,
+                    "Drucken leider fehlgeschlagen! Konnte Datei nicht von Telegram abrufen.")
                     .setReplyToMessageId(replyTo))
         } catch (e: IOException) {
             e.printStackTrace()
@@ -186,6 +190,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                 .setChatId(callbackQuery.message.chatId)
                 .setMessageId(callbackQuery.message.messageId)
                 .setText(text))
+        executeSafe(SendChatAction(callbackQuery.message.chatId, "typing"))
+
         iliasResources.filter { it.selected }.forEach { UserStorage.logPrintJob(user, it) }
         IliasResourceStorage.delete(iliasResources)
 
@@ -195,7 +201,8 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                     .setReplyToMessageId(callbackQuery.message.messageId))
         } catch (e: IOException) {
             e.printStackTrace()
-            executeSafe(SendMessage(callbackQuery.message.chatId, "Drucken leider fehlgeschlagen! IOException")
+            executeSafe(SendMessage(callbackQuery.message.chatId,
+                    "Drucken leider fehlgeschlagen! IOException")
                     .setReplyToMessageId(callbackQuery.message.messageId))
         }
     }
