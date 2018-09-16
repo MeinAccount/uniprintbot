@@ -6,3 +6,4 @@
 *.iml
 
 src/main/webapp/WEB-INF/uniprintbot.json
+src/main/kotlin/config.kt
