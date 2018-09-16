@@ -8,7 +8,7 @@ import com.google.cloud.datastore.Entity
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemorySourceFile
-import org.telegram.telegrambots.api.objects.File
+import org.telegram.telegrambots.meta.api.objects.File
 import java.io.InputStream
 import java.util.*
 import java.util.concurrent.TimeUnit

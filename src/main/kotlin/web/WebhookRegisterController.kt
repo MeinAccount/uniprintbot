@@ -2,9 +2,9 @@ package web
 
 import BOT_PATH
 import BOT_TOKEN
-import org.telegram.telegrambots.api.methods.BotApiMethod
-import org.telegram.telegrambots.api.objects.Update
 import org.telegram.telegrambots.bots.TelegramWebhookBot
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod
+import org.telegram.telegrambots.meta.api.objects.Update
 import javax.servlet.annotation.HttpConstraint
 import javax.servlet.annotation.ServletSecurity
 import javax.servlet.annotation.WebServlet

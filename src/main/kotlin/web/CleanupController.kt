@@ -3,7 +3,7 @@ package web
 import com.google.cloud.Timestamp
 import com.google.cloud.datastore.Query
 import com.google.cloud.datastore.StructuredQuery
-import org.telegram.telegrambots.api.methods.updatingmessages.EditMessageText
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import remote.datastore
 import java.time.LocalDateTime
 import javax.servlet.annotation.HttpConstraint

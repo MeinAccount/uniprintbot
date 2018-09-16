@@ -2,7 +2,7 @@ package web
 
 import BOT_PATH
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.telegram.telegrambots.api.objects.Update
+import org.telegram.telegrambots.meta.api.objects.Update
 import javax.servlet.annotation.WebServlet
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest

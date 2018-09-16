@@ -5,7 +5,7 @@ import com.google.cloud.datastore.Entity
 import com.google.cloud.datastore.PathElement
 import com.google.cloud.datastore.Query
 import com.google.cloud.datastore.StructuredQuery
-import org.telegram.telegrambots.api.objects.Document
+import org.telegram.telegrambots.meta.api.objects.Document
 
 object UserStorage {
     fun getUser(userId: Int): Entity? = datastore.get(datastore.newKeyFactory()
