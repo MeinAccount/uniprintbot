@@ -11,4 +11,11 @@
 		<description>Notifies users about new Ilias resources</description>
 		<schedule>every 1 hours</schedule>
 	</cron>
+
+	<cron>
+		<url>/heiko/today</url>
+		<description>Notifies Heiko about important stuff!</description>
+		<schedule>every tuesday 10:00</schedule>
+		<timezone>Europe/Berlin</timezone>
+	</cron>
 </cronentries>
