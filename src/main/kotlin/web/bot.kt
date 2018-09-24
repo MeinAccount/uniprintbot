@@ -11,6 +11,7 @@ import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.SendChatAction
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery
@@ -29,7 +30,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         if (update.hasMessage()) {
             val user = UserStorage.getUser(update.message.from.id)
             if (user == null) {
-                execute(SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}"))
+                executeSafe(SendMessage(update.message.chatId, "Permission Denied for user ${update.message.from.id}"))
             } else {
                 processMessage(update.message, user)
             }
@@ -37,7 +38,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         } else if (update.hasCallbackQuery()) {
             val user = UserStorage.getUser(update.callbackQuery.from.id)
             if (user == null) {
-                execute(SendMessage(update.message.chatId,
+                executeSafe(SendMessage(update.message.chatId,
                         "Permission Denied for user ${update.callbackQuery.from.id}"))
             } else {
                 processCallbackQuery(update.callbackQuery, user)
@@ -49,12 +50,12 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
         if (message.hasText()) {
             when (message.text.toLowerCase()) { // process commands
                 "/start" ->
-                    execute(SendMessage(message.chatId,
+                    executeSafe(SendMessage(message.chatId,
                             "Sende mir eine PDF-Datei oder drucke Statistik-Blätter mit /statistik.\n" +
                                     "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken."))
                 "/cancel" -> {
                     try {
-                        execute(SendChatAction(message.chatId, "typing"))
+                        executeSafe(SendChatAction(message.chatId, "typing"))
                         RemoteHost.cancelAll()
                         executeSafe(SendMessage(message.chatId, "Alle Druckaufträge wurden abgebrochen."))
                     } catch (e: IOException) {
@@ -68,24 +69,25 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                             validateTelegramFile(message.replyToMessage.document)) {
                         printTelegramFile(user, message.replyToMessage.document, message)
                     } else {
-                        execute(SendMessage(message.chatId,
+                        executeSafe(SendMessage(message.chatId,
                                 "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken."))
                     }
 
                 "/statistik" -> {
-                    execute(SendChatAction(message.chatId, "typing"))
+                    executeSafe(SendChatAction(message.chatId, "typing"))
 
                     val iliasResources = Ilias.listIliasResources("statistik", ILIAS_PAGE_ID)
-                    IliasResourceStorage.save(user, iliasResources)
-
-                    val response = execute(SendMessage(message.chatId,
+                    val response = executeSafe(SendMessage(message.chatId,
                             "Welche Dateien sollen gedruckt werden?")
                             .setReplyMarkup(getIliasResourcesKeyboard(iliasResources)))
-                    IliasResourceStorage.updateMessage(response.chatId, response.messageId, iliasResources)
+                    if (response != null) {
+                        IliasResourceStorage.save(user, iliasResources)
+                        IliasResourceStorage.updateMessage(response.chatId, response.messageId, iliasResources)
+                    }
                 }
                 "/recheck" -> QueueFactory.getDefaultQueue().add(TaskOptions.Builder.withUrl("/ilias/notify"))
 
-                else -> execute(SendMessage(message.chatId, "Ich habe dich leider nicht verstanden."))
+                else -> executeSafe(SendMessage(message.chatId, "Ich habe dich leider nicht verstanden."))
             }
 
         } else if (message.hasDocument() && validateTelegramFile(message.document)) {
@@ -94,11 +96,11 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             keyboard.keyboard.add(listOf(InlineKeyboardButton("${message.document.fileName} drucken")
                     .setCallbackData("printTelegramFile")))
 
-            execute(SendMessage(message.chatId, "Bestätige den Druckvorgang:")
+            executeSafe(SendMessage(message.chatId, "Bestätige den Druckvorgang:")
                     .setReplyToMessageId(message.messageId)
                     .setReplyMarkup(keyboard))
         } else {
-            execute(SendMessage(message.chatId, "Ich verarbeite nur PDF-Dateien."))
+            executeSafe(SendMessage(message.chatId, "Ich verarbeite nur PDF-Dateien."))
         }
     }
 
@@ -111,7 +113,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
 
                 val selected = iliasResources.filter { it.selected }
                 when (selected.size) {
-                    0 -> execute(AnswerCallbackQuery().setCallbackQueryId(callbackQuery.id))
+                    0 -> executeSafe(AnswerCallbackQuery().setCallbackQueryId(callbackQuery.id))
                     1 -> printIliasResources(callbackQuery, user, iliasResources,
                             "${selected.single().getPrintName()} wird gedruckt...")
                     else -> {
@@ -134,6 +136,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
                             .setText("Datei wird gedruckt..."))
 
                     printTelegramFile(user, callbackQuery.message.replyToMessage.document, callbackQuery.message)
+                    executeSafe(DeleteMessage(callbackQuery.message.chatId, callbackQuery.message.messageId))
                 }
 
             callbackQuery.data.startsWith("toggle|") -> {
@@ -162,7 +165,7 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
             document.fileName.endsWith(".pdf") && document.mimeType == "application/pdf"
 
     private fun printTelegramFile(user: Entity, document: Document, message: Message) {
-        execute(SendChatAction(message.chatId, "typing"))
+        executeSafe(SendChatAction(message.chatId, "typing"))
         val replyTo = message.replyToMessage?.messageId ?: message.messageId
 
         try {
