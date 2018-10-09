@@ -1,10 +1,12 @@
 import org.telegram.telegrambots.ApiContextInitializer
 import org.telegram.telegrambots.meta.TelegramBotsApi
-import web.PollingUniPrintBot
+import print.UniPrintBot
 
 fun main(args: Array<String>) {
     ApiContextInitializer.init()
 
     val api = TelegramBotsApi()
-    api.registerBot(PollingUniPrintBot())
+    val printBot = UniPrintBot()
+    printBot.clearOverrideWebhook()
+    api.registerBot(printBot)
 }

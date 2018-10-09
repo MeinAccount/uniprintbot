@@ -1,4 +1,4 @@
-package web
+package print
 
 import BOT_TOKEN
 import ILIAS_PAGE_ID
@@ -25,7 +25,7 @@ import remote.*
 import java.io.IOException
 import java.io.Serializable
 
-open class PollingUniPrintBot : TelegramLongPollingBot() {
+class UniPrintBot : TelegramLongPollingBot() {
     override fun onUpdateReceived(update: Update) {
         if (update.hasMessage()) {
             val user = UserStorage.getUser(update.message.from.id)
@@ -233,10 +233,12 @@ open class PollingUniPrintBot : TelegramLongPollingBot() {
     override fun getBotToken() = BOT_TOKEN
 
     override fun getBotUsername() = "UniPrintBot"
-}
 
 
-class UniPrintBot : PollingUniPrintBot() {
     override fun clearWebhook() {
+    }
+
+    fun clearOverrideWebhook() {
+        super.clearWebhook()
     }
 }

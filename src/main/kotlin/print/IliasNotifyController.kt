@@ -1,4 +1,4 @@
-package web
+package print
 
 import ILIAS_PAGE_ID
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument
@@ -22,6 +22,7 @@ class IliasNotifyController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         val iliasResources = Ilias.listIliasResources("statistik", ILIAS_PAGE_ID)
         val resourceToTelegramFileId = mutableMapOf<IliasResource, String>()
+        val bot = UniPrintBot()
 
         UserStorage.listNotifyUsers().forEach { user ->
             val urlSet = UserIliasNotificationStorage.getByUser(user).map { notification ->
@@ -44,7 +45,7 @@ class IliasNotifyController : HttpServlet() {
                             command.setDocument(name, Ilias.download(resource.url).inputStream())
                         }
 
-                        val message = WebhookController.bot.execute(command)
+                        val message = bot.execute(command)
                         UserIliasNotificationStorage.add(user, message.chatId, message.messageId, resource)
                         return@compute message.document.fileId
                     } catch (e: TelegramApiException) {

@@ -1,4 +1,4 @@
-package web
+package print
 
 import com.google.cloud.Timestamp
 import com.google.cloud.datastore.Query
@@ -24,13 +24,14 @@ class CleanupController : HttpServlet() {
                         Timestamp.of(weekAgo))).build()
 
         val processed = mutableSetOf<Pair<Long, Long>>()
+        val bot = UniPrintBot()
         datastore.run(query).forEach { entity ->
             val chatId = entity.getLong("chatId")
             val messageId = entity.getLong("messageId")
             println(entity)
 
             if (processed.add(chatId to messageId)) {
-                WebhookController.bot.executeSafe(EditMessageText()
+                bot.executeSafe(EditMessageText()
                         .setChatId(chatId.toString())
                         .setMessageId(messageId.toInt())
                         .setText("Abgebrochen"))

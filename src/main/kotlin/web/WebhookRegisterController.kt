@@ -2,6 +2,8 @@ package web
 
 import BOT_PATH
 import BOT_TOKEN
+import HEIKO_PATH
+import HEIKO_TOKEN
 import org.telegram.telegrambots.bots.TelegramWebhookBot
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.objects.Update
@@ -16,17 +18,30 @@ import javax.servlet.http.HttpServletResponse
 @ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
 class WebhookRegisterController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-        val bot = BotWebhook()
-        bot.setWebhook("https://uniprintbot.appspot.com/$BOT_PATH", null);
+        PrintBotWebhook().setWebhook("https://uniprintbot.appspot.com/$BOT_PATH", null);
+        HeikoBotWebhook().setWebhook("https://uniprintbot.appspot.com/$HEIKO_PATH", null);
         resp.writer.println("Success")
     }
 
-    private class BotWebhook : TelegramWebhookBot() {
+
+    private class PrintBotWebhook : TelegramWebhookBot() {
+        override fun getBotPath() = BOT_PATH
+
         override fun getBotToken() = BOT_TOKEN
 
         override fun getBotUsername() = "UniPrintBot"
 
-        override fun getBotPath() = "UniPrintBot"
+        override fun onWebhookUpdateReceived(update: Update): BotApiMethod<*> {
+            TODO("not implemented")
+        }
+    }
+
+    private class HeikoBotWebhook : TelegramWebhookBot() {
+        override fun getBotPath() = HEIKO_PATH
+
+        override fun getBotUsername() = "HeikoNotificationBot"
+
+        override fun getBotToken() = HEIKO_TOKEN
 
         override fun onWebhookUpdateReceived(update: Update?): BotApiMethod<*> {
             TODO("not implemented")

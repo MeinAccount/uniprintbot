@@ -1,4 +1,4 @@
-package web
+package print
 
 import javax.servlet.annotation.WebServlet
 import javax.servlet.http.HttpServlet
