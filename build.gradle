@@ -40,7 +40,8 @@ dependencies {
     compile 'com.squareup.retrofit2:converter-scalars:2.4.0'
 
 
-    compile 'com.google.cloud:google-cloud-datastore:1.44.0'
+    compile 'com.google.cloud:google-cloud-datastore:1.48.0'
+    compile 'com.google.cloud:google-cloud-language:1.48.0'
     compile 'com.google.appengine:appengine-api-1.0-sdk:1.9.64'
     providedCompile 'javax.servlet:javax.servlet-api:4.0.1'
 
