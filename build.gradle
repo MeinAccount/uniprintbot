@@ -10,7 +10,7 @@ buildscript {
 
 plugins {
     id 'java'
-    id 'org.jetbrains.kotlin.jvm' version '1.2.70'
+    id 'org.jetbrains.kotlin.jvm' version '1.2.60'
 }
 
 repositories {
@@ -30,7 +30,7 @@ appengine {
 
 dependencies {
     compile 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.26.0'
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.30.2'
 
     compile 'org.telegram:telegrambots:4.1'
     compile 'com.hierynomus:sshj:0.26.0'
@@ -42,7 +42,7 @@ dependencies {
 
     compile 'com.google.cloud:google-cloud-datastore:1.48.0'
     compile 'com.google.cloud:google-cloud-language:1.48.0'
-    compile 'com.google.appengine:appengine-api-1.0-sdk:1.9.64'
+    compile 'com.google.appengine:appengine-api-1.0-sdk:1.9.66'
     providedCompile 'javax.servlet:javax.servlet-api:4.0.1'
 
     testCompile 'com.google.appengine:appengine-testing:+'
