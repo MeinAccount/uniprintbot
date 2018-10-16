@@ -85,7 +85,7 @@ class UniPrintBot : TelegramLongPollingBot() {
                         IliasResourceStorage.updateMessage(response.chatId, response.messageId, iliasResources)
                     }
                 }
-                "/recheck" -> QueueFactory.getDefaultQueue().add(TaskOptions.Builder.withUrl("/ilias/notify"))
+                "/recheck" -> QueueFactory.getDefaultQueue().add(TaskOptions.Builder.withUrl("/notify"))
 
                 else -> executeSafe(SendMessage(message.chatId, "Ich habe dich leider nicht verstanden."))
             }

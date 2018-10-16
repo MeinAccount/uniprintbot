@@ -7,8 +7,8 @@
 		<timezone>Europe/Berlin</timezone>
 	</cron>
 	<cron>
-		<url>/ilias/notify</url>
-		<description>Notifies users about new Ilias resources</description>
+		<url>/notify</url>
+		<description>Notifies users about new resources</description>
 		<schedule>every 1 hours</schedule>
 	</cron>
 

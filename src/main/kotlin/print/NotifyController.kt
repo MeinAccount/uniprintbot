@@ -1,6 +1,6 @@
 package print
 
-import ILIAS_PAGE_ID
+import NOTIFY_RESOURCE_LIST
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
@@ -16,23 +16,24 @@ import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
-@WebServlet("/ilias/notify")
+@WebServlet("/notify")
 @ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
-class IliasNotifyController : HttpServlet() {
-    override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-        val iliasResources = Ilias.listIliasResources("statistik", ILIAS_PAGE_ID)
-        val resourceToTelegramFileId = mutableMapOf<IliasResource, String>()
-        val bot = UniPrintBot()
+class NotifyController : HttpServlet() {
+    private val bot = UniPrintBot()
+    private val resourceToTelegramFileId = mutableMapOf<IliasResource, String>()
 
-        UserStorage.listNotifyUsers().forEach { user ->
+    override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
+        val resources = NOTIFY_RESOURCE_LIST()
+        UserStorage.listUsers().forEach { user ->
             val urlSet = UserIliasNotificationStorage.getByUser(user).map { notification ->
                 notification.getString("url")
             }.toSet()
 
-            iliasResources.filter { !urlSet.contains(it.url) }.forEach { resource ->
-                val name = "Statistik ${resource.name}"
+            resources.filterKeys { user.getBoolean(it) }.values.flatten().filter {
+                !urlSet.contains(it.url)
+            }.forEach { resource ->
                 val keyboard = InlineKeyboardMarkup()
-                keyboard.keyboard.add(listOf(InlineKeyboardButton("$name drucken")
+                keyboard.keyboard.add(listOf(InlineKeyboardButton("${resource.name} drucken")
                         .setCallbackData("printTelegramFile")))
 
                 resourceToTelegramFileId.compute(resource) { _, fileId ->
@@ -42,7 +43,7 @@ class IliasNotifyController : HttpServlet() {
                                 .setReplyMarkup(keyboard)
                                 .setDocument(fileId)
                         if (fileId == null) { // upload file to Telegram
-                            command.setDocument(name, Ilias.download(resource.url).inputStream())
+                            command.setDocument(resource.name, Ilias.download(resource.url).inputStream())
                         }
 
                         val message = bot.execute(command)
@@ -60,4 +61,3 @@ class IliasNotifyController : HttpServlet() {
         doGet(req, resp)
     }
 }
-

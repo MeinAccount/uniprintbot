@@ -12,9 +12,8 @@ object UserStorage {
             .setKind("User")
             .newKey(userId.toString()))
 
-    fun listNotifyUsers() = datastore.run(Query.newEntityQueryBuilder()
+    fun listUsers() = datastore.run(Query.newEntityQueryBuilder()
             .setKind("User")
-            .setFilter(StructuredQuery.PropertyFilter.eq("notify", true))
             .build()).iterator()
 
 
