@@ -2,8 +2,6 @@ package print
 
 import NOTIFY_RESOURCE_LIST
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import remote.Ilias
 import remote.IliasResource
@@ -32,15 +30,10 @@ class NotifyController : HttpServlet() {
             resources.filterKeys { user.getBoolean(it) }.values.flatten().filter {
                 !urlSet.contains(it.url)
             }.forEach { resource ->
-                val keyboard = InlineKeyboardMarkup()
-                keyboard.keyboard.add(listOf(InlineKeyboardButton("${resource.getPrintName()} drucken")
-                        .setCallbackData("printTelegramFile")))
-
                 resourceToTelegramFileId.compute(resource) { _, fileId ->
                     try {
                         val command = SendDocument()
                                 .setChatId(user.key.name)
-                                .setReplyMarkup(keyboard)
                                 .setDocument(fileId)
                         if (fileId == null) { // upload file to Telegram
                             command.setDocument(resource.getPrintName(), Ilias.download(resource.url).inputStream())

@@ -43,7 +43,8 @@ object Ilias {
 
         val iliasResources = mutableListOf<IliasResource>()
         while (matcher.find()) {
-            iliasResources.add(IliasResource(baseName, matcher.group(2), baseUrl + matcher.group(1)))
+            iliasResources.add(IliasResource(baseName, "${matcher.group(2)}.pdf",
+                    baseUrl + matcher.group(1)))
         }
 
         return iliasResources.toList()
