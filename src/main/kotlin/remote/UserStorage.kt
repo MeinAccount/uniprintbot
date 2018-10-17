@@ -4,7 +4,6 @@ import com.google.cloud.Timestamp
 import com.google.cloud.datastore.Entity
 import com.google.cloud.datastore.PathElement
 import com.google.cloud.datastore.Query
-import com.google.cloud.datastore.StructuredQuery
 import org.telegram.telegrambots.meta.api.objects.Document
 
 object UserStorage {
@@ -15,20 +14,6 @@ object UserStorage {
     fun listUsers() = datastore.run(Query.newEntityQueryBuilder()
             .setKind("User")
             .build()).iterator()
-
-
-    fun logPrintJob(user: Entity, resource: IliasResource) {
-        val key = datastore.newKeyFactory()
-                .addAncestor(PathElement.of("User", user.key.name))
-                .setKind("PrintJob").newKey()
-        datastore.add(Entity.newBuilder(key)
-                .set("kind", "iliasResource")
-                .set("type", resource.type)
-                .set("fileName", resource.name)
-                .set("fileUrl", resource.url)
-                .set("time", Timestamp.now())
-                .build())
-    }
 
     fun logPrintJob(user: Entity, document: Document) {
         val key = datastore.newKeyFactory()

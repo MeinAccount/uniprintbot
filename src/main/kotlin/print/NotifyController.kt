@@ -33,7 +33,7 @@ class NotifyController : HttpServlet() {
                 !urlSet.contains(it.url)
             }.forEach { resource ->
                 val keyboard = InlineKeyboardMarkup()
-                keyboard.keyboard.add(listOf(InlineKeyboardButton("${resource.name} drucken")
+                keyboard.keyboard.add(listOf(InlineKeyboardButton("${resource.getPrintName()} drucken")
                         .setCallbackData("printTelegramFile")))
 
                 resourceToTelegramFileId.compute(resource) { _, fileId ->
@@ -43,7 +43,7 @@ class NotifyController : HttpServlet() {
                                 .setReplyMarkup(keyboard)
                                 .setDocument(fileId)
                         if (fileId == null) { // upload file to Telegram
-                            command.setDocument(resource.name, Ilias.download(resource.url).inputStream())
+                            command.setDocument(resource.getPrintName(), Ilias.download(resource.url).inputStream())
                         }
 
                         val message = bot.execute(command)

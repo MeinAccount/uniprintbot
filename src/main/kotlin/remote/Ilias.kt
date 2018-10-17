@@ -30,7 +30,7 @@ object Ilias {
                 .matcher(response.body())
         val iliasResources = mutableListOf<IliasResource>()
         while (matcher.find()) {
-            iliasResources.add(IliasResource(type, "$type ${matcher.group(1)}",
+            iliasResources.add(IliasResource(type, matcher.group(1),
                     matcher.group(2).replace("&amp;", "&")))
         }
 
@@ -43,8 +43,7 @@ object Ilias {
 
         val iliasResources = mutableListOf<IliasResource>()
         while (matcher.find()) {
-            iliasResources.add(IliasResource(baseName, "$baseName ${matcher.group(2)}",
-                    baseUrl + matcher.group(1)))
+            iliasResources.add(IliasResource(baseName, matcher.group(2), baseUrl + matcher.group(1)))
         }
 
         return iliasResources.toList()
