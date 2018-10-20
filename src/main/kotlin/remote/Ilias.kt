@@ -37,6 +37,27 @@ object Ilias {
         return iliasResources
     }
 
+    fun listIliasResourcesGoto(type: String, url: String): List<IliasResource> {
+        var response = ilias.download(url).execute().body()?.string()
+        if (response?.contains("Inhalt") != true) {
+            ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
+            response = ilias.download(url).execute().body()?.string()
+        }
+
+        val matcher = Pattern.compile("""<h4 class="il_ContainerItemTitle"><a href="([^"]+)"[^>]*>([^<]+)</a>.*?</a>""")
+                .matcher(response ?: "")
+
+        val iliasResources = mutableListOf<IliasResource>()
+        while (matcher.find()) {
+            val nameShortend = matcher.group(2).replace("Übungsblatt", "Blatt")
+            iliasResources.add(IliasResource(type, "$nameShortend.pdf",
+                    matcher.group(1).replace("&amp;", "&")))
+        }
+
+        return iliasResources
+    }
+
+
     fun listWebResources(baseName: String, baseUrl: String): List<IliasResource> {
         val matcher = Pattern.compile("""<a href="(uebung/g[0-9]+\.pdf)">([^<]+)</a>""")
                 .matcher(ilias.download(baseUrl).execute().body()?.string())
@@ -50,9 +71,14 @@ object Ilias {
         return iliasResources.toList()
     }
 
-
     fun download(url: String): ByteArray {
-        return ilias.download(url).execute().body()!!.bytes()
+        var response = ilias.download(url).execute()
+        if (response.raw().request().url().encodedPath().contains("login")) {
+            ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
+            response = ilias.download(url).execute()
+        }
+
+        return response.body()!!.bytes()
     }
 
 
