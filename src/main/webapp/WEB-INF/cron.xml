@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <cronentries>
 	<cron>
-		<url>/cleanup</url>
-		<description>Daily Cleanup</description>
-		<schedule>every day 04:37</schedule>
-		<timezone>Europe/Berlin</timezone>
-	</cron>
-	<cron>
 		<url>/notify</url>
 		<description>Notifies users about new resources</description>
 		<schedule>every 1 hours</schedule>

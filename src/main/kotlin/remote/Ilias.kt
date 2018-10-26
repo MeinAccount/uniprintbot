@@ -58,8 +58,8 @@ object Ilias {
     }
 
 
-    fun listWebResources(baseName: String, baseUrl: String): List<IliasResource> {
-        val matcher = Pattern.compile("""<a href="(uebung/g[0-9]+\.pdf)">([^<]+)</a>""")
+    fun listWebResources(baseName: String, baseUrl: String, regex: String): List<IliasResource> {
+        val matcher = Pattern.compile(regex)
                 .matcher(ilias.download(baseUrl).execute().body()?.string())
 
         val iliasResources = mutableListOf<IliasResource>()
