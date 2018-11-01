@@ -14,23 +14,12 @@ import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.Update
 import java.io.File
 import java.io.FileInputStream
-import java.util.*
 
 private val client = LanguageServiceClient.create(LanguageServiceSettings.newBuilder()
         .setCredentialsProvider(FixedCredentialsProvider.create(GoogleCredentials.fromStream(
                 if (File("WEB-INF/uniprintbot.json").exists())
                     FileInputStream("WEB-INF/uniprintbot.json")
                 else FileInputStream("src/main/webapp/WEB-INF/uniprintbot.json")))).build())
-
-private val negativeStickers = arrayOf("CAADAgADIAADyIsGAAGwI-I5pMSEdQI", "CAADAgADLwIAArrAlQXCB-MwsRsKUAI",
-        "CAADAgAD6AMAAvJ-ggyV1koZSeQd7QI", "CAADAgADdQIAAsSraAthqwkz4CCMGwI", "CAADAgADKwIAAj-VzAq8_jVvbB-ZgQI",
-        "CAADAgADTAUAAmMr4glGKjnwtWFTIAI", "CAADAgAD6wEAAiCBFQABCQn4d2vDOrcC", "CAADAgAD5QADNnYgDr7EklL1F-d-Ag",
-        "CAADAgADuQEAAgeGFQcm74jOQU-L8wI", "CAADAgADfAUAAhhC7gjEYV0FBA_xjgI")
-private val positiveStickers = arrayOf("CAADAgADnAIAAj-VzAovQnDNQQe33QI", "CAADAgADnwEAAgeGFQfRYJU4HtbsvAI",
-        "CAADAgADuAUAAvoLtghew_BTab-Q-QI", "CAADAgADtQUAAmMr4gm433nFpTkpEAI", "CAADAgADBwIAAtzyqwdVSve97Ve_kQI",
-        "CAADAgADewUAAhhC7ggL5p5h3oDTAwI", "CAADAgADjAIAAj-VzArhgivUMNJrhgI", "CAADAgAD6QAEOKAKSndrbn6hA3EC",
-        "CAADAgADfQMAAsSraAvoUE-v_dODPwI", "CAADAgADyAUAAvoLtgi1ezx5lIjuZwI")
-
 
 class HeikoNotificationBot : TelegramLongPollingBot() {
     override fun onUpdateReceived(update: Update) {
@@ -71,15 +60,14 @@ class HeikoNotificationBot : TelegramLongPollingBot() {
                 execute(SendMessage(message.chatId,
                         "Score ${sentiment.documentSentiment.score} at magnitude ${sentiment.documentSentiment.magnitude}")
                         .setReplyToMessageId(message.messageId))
-            } else if (sentiment.documentSentiment.score < 0) {
+            } else {
                 execute(SendSticker()
                         .setChatId(message.chatId)
-                        .setSticker(negativeStickers.random())
-                        .setReplyToMessageId(message.messageId))
-            } else if (sentiment.documentSentiment.score >= 0.4 && text.contains("@HeikoNotificationBot")) {
-                execute(SendSticker()
-                        .setChatId(message.chatId)
-                        .setSticker(positiveStickers.random())
+                        .setSticker(when {
+                            sentiment.documentSentiment.score < 0 -> negativeStickers.random()
+                            sentiment.documentSentiment.score > 0 -> positiveStickers.random()
+                            else -> unknownStickers.random()
+                        })
                         .setReplyToMessageId(message.messageId))
             }
         } else if (message.isReply) {
@@ -92,7 +80,3 @@ class HeikoNotificationBot : TelegramLongPollingBot() {
 
     override fun getBotToken() = HEIKO_TOKEN
 }
-
-
-private val random = Random()
-fun <T> Array<T>.random() = get(random.nextInt(size))
