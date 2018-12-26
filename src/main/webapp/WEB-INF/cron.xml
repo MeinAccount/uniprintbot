@@ -6,16 +6,16 @@
 		<schedule>every 1 hours</schedule>
 	</cron>
 
-	<cron>
-		<url>/heiko/tuesday</url>
-		<description>Notifies Heiko about important stuff!</description>
-		<schedule>every tuesday 12:00</schedule>
-		<timezone>Europe/Berlin</timezone>
-	</cron>
+	<!--<cron>-->
+		<!--<url>/heiko/tuesday</url>-->
+		<!--<description>Notifies Heiko about important stuff!</description>-->
+		<!--<schedule>every tuesday 12:00</schedule>-->
+		<!--<timezone>Europe/Berlin</timezone>-->
+	<!--</cron>-->
 	<cron>
 		<url>/heiko/today</url>
 		<description>Notifies Heiko about important stuff!</description>
-		<schedule>every wednesday 12:00</schedule>
+		<schedule>every wednesday 15:30</schedule>
 		<timezone>Europe/Berlin</timezone>
 	</cron>
 </cronentries>
