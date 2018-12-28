@@ -22,10 +22,6 @@ h1 {
     padding-right: 0;
 }
 
-#chart + table td:nth-child(3), #chart + table td:last-child {
-    text-align: right;
-}
-
 
 h1 a {
     text-decoration: none;
@@ -37,15 +33,15 @@ table {
     border-collapse: collapse;
 }
 
-th {
-    font-weight: bold;
-}
-
 td {
     padding: 5px;
 
     border-right: 1px solid black;
     border-bottom: 1px solid black;
+}
+
+td.right {
+    text-align: right;
 }
 
 td:last-child {

@@ -7,6 +7,11 @@ import kotlinx.html.stream.appendHTML
 import remote.UserStorage
 import remote.datastore
 import java.text.DecimalFormat
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.*
 import javax.servlet.annotation.HttpConstraint
 import javax.servlet.annotation.ServletSecurity
@@ -19,6 +24,8 @@ import javax.servlet.http.HttpServletResponse
 @WebServlet("/stats")
 @ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
 class StatsController : HttpServlet() {
+    private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss.SSS")
+
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         val users = UserStorage.listUsers().asSequence().map {
             it.key.name to UserStat(it.key.name, it.getString("name"))
@@ -54,8 +61,8 @@ class StatsController : HttpServlet() {
                             tr {
                                 td { text(user.name) }
                                 td { text("${user.jobs.size} Aufträge") }
-                                td { text("(${String.format("%.2f", user.jobs.size * 100.0 / jobs.size)}%)") }
-                                td { text(formatBytes(user.totalSize)) }
+                                td("right") { text("(${String.format("%.2f", user.jobs.size * 100.0 / jobs.size)}%)") }
+                                td("right") { text(formatBytes(user.totalSize)) }
                             }
                         }
                     }
@@ -69,21 +76,21 @@ class StatsController : HttpServlet() {
                 }
                 div("center") {
                     table {
-                        tr {
-                            th { text("Benutzer") }
-                            th { text("Dateiname") }
-                            th { text("Dateigröße") }
-                            th { text("Datum") }
-                        }
-
                         (req.getParameter("user")?.let { userIdFilter ->
                             jobs.filter { it.user.userId == userIdFilter }
                         } ?: jobs).map { job ->
                             tr {
                                 td { a("stats?user=${job.user.userId}") { text(job.user.name) } }
+                                td {
+                                    val utcLocalTime = LocalDateTime.ofEpochSecond(job.time.seconds, job.time.nanos, ZoneOffset.UTC)
+                                    val offset = ZoneId.of("Europe/Berlin").rules.getOffset(Instant.now())
+
+                                    // format the instant respecting the *current* (as in: not the daylight saving time
+                                    // in use at the instant) daylight saving
+                                    text(dateFormatter.format(utcLocalTime.plusSeconds(offset.totalSeconds.toLong())))
+                                }
                                 td { a("download/${job.fileId}") { text(job.name) } }
-                                td { text(job.readableSize()) }
-                                td { text(job.time.toDate().toString()) }
+                                td("right") { text(job.readableSize()) }
                             }
                         }
                     }
