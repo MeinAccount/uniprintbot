@@ -9,7 +9,10 @@ import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.*
+import java.net.HttpURLConnection
+import java.security.MessageDigest
 import java.util.regex.Pattern
+import javax.xml.bind.DatatypeConverter
 
 object Ilias {
     private val ilias = Retrofit.Builder()
@@ -19,25 +22,7 @@ object Ilias {
                     .cookieJar(CookieStore()).build())
             .build().create(IliasAPI::class.java)
 
-    fun listIliasResources(type: String, pageId: String): List<IliasResource> {
-        var response = ilias.listPage(pageId, pageId).execute()
-        if (response.body()?.contains("Übungsblätter") != true) {
-            ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
-            response = ilias.listPage(pageId, pageId).execute()
-        }
-
-        val matcher = Pattern.compile("""<div class="form-group">\s*<div[^>]*>(.*\.pdf)</div>\s*<div[^>]*>\s*<a href="([^"]*)"[^>]*>Download</a>\s*</div>\s*</div>""")
-                .matcher(response.body())
-        val iliasResources = mutableListOf<IliasResource>()
-        while (matcher.find()) {
-            iliasResources.add(IliasResource(type, matcher.group(1),
-                    matcher.group(2).replace("&amp;", "&")))
-        }
-
-        return iliasResources
-    }
-
-    fun listIliasResourcesGoto(type: String, url: String): List<IliasResource> {
+    fun listIliasResourcesGoto(url: String): List<Pair<String, String>> {
         var response = ilias.download(url).execute().body()?.string()
         if (response?.contains("Inhalt") != true) {
             ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
@@ -47,38 +32,55 @@ object Ilias {
         val matcher = Pattern.compile("""<h4 class="il_ContainerItemTitle"><a href="([^"]+)"[^>]*>([^<]+)</a>.*?</a>""")
                 .matcher(response ?: "")
 
-        val iliasResources = mutableListOf<IliasResource>()
+        val iliasResources = mutableListOf<Pair<String, String>>()
         while (matcher.find()) {
-            val nameShortend = matcher.group(2).replace("Übungsblatt", "Blatt")
-            iliasResources.add(IliasResource(type, "$nameShortend.pdf",
-                    matcher.group(1).replace("&amp;", "&")))
-        }
-
-        return iliasResources
-    }
-
-
-    fun listWebResources(baseName: String, baseUrl: String, regex: String): List<IliasResource> {
-        val matcher = Pattern.compile(regex)
-                .matcher(ilias.download(baseUrl).execute().body()?.string())
-
-        val iliasResources = mutableListOf<IliasResource>()
-        while (matcher.find()) {
-            iliasResources.add(IliasResource(baseName, "${matcher.group(2)}.pdf",
-                    baseUrl + matcher.group(1)))
+            val nameShortened = matcher.group(2).trim().replace("Übungsblatt", "Blatt")
+            iliasResources.add("$nameShortened.pdf" to matcher.group(1).replace("&amp;", "&"))
         }
 
         return iliasResources.toList()
     }
 
-    fun download(url: String): ByteArray {
-        var response = ilias.download(url).execute()
-        if (response.raw().request().url().encodedPath().contains("login")) {
-            ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
-            response = ilias.download(url).execute()
+    fun listWebResources(baseUrl: String, regex: String): List<Pair<String, String>> {
+        val matcher = Pattern.compile(regex)
+                .matcher(ilias.download(baseUrl).execute().body()?.string())
+
+        val iliasResources = mutableListOf<Pair<String, String>>()
+        while (matcher.find()) {
+            iliasResources.add("${matcher.group(2)}.pdf" to baseUrl + matcher.group(1))
         }
 
-        return response.body()!!.bytes()
+        return iliasResources.toList()
+    }
+
+
+    fun downloadRefresh(type: String, name: String, url: String, previous: IliasResource?): IliasResource? {
+        var response = ilias.download(url, previous?.hash).execute()
+        if (response.raw().request().url().encodedPath().contains("login")) {
+            ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
+            response = ilias.download(url, previous?.hash).execute()
+        }
+
+        if (previous != null && response.code() == HttpURLConnection.HTTP_NOT_MODIFIED) {
+            println("$type $name unchanged ${previous.hash}")
+            return previous.copy(name = name)
+        } else if (response.isSuccessful) {
+            val bytes = response.body()!!.bytes()
+            val hash = response.headers()["ETag"]
+                    ?: DatatypeConverter.printHexBinary(MessageDigest.getInstance("MD5").digest(bytes))
+
+            if (previous != null && previous.hash == hash) {
+                println("$type $name unchaged MD5 $hash")
+                return previous.copy(name = name)
+            } else {
+                println("$type $name ${previous?.let { "changed ${it.hash}" } ?: "uncached"} $hash")
+                return IliasResource(type, name, url, hash, TelegramResource.LocalTelegramResource(bytes))
+            }
+        }
+
+        println("Failed to fetch $type $name!")
+        println(response)
+        return null
     }
 
 
@@ -94,7 +96,7 @@ object Ilias {
                      @Query("target") target: String): Call<String>
 
         @GET
-        fun download(@Url url: String): Call<ResponseBody>
+        fun download(@Url url: String, @Header("If-None-Match") etag: String? = null): Call<ResponseBody>
     }
 
     private data class CookieStore(private var cookies: List<Cookie> = emptyList()) : CookieJar {

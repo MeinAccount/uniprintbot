@@ -2,7 +2,8 @@ package remote
 
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.cloud.datastore.DatastoreOptions
-import com.google.cloud.datastore.Entity
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument
+import org.telegram.telegrambots.meta.api.objects.Message
 import java.io.File
 import java.io.FileInputStream
 
@@ -14,6 +15,27 @@ internal val datastore = DatastoreOptions.newBuilder()
         .build().service
 
 data class IliasResource(val type: String, val name: String, val url: String,
-                         var selected: Boolean = false, var entity: Entity? = null) {
-    fun getPrintName() = "${type.capitalize()} $name"
+                         val hash: String, var telegram: TelegramResource) {
+    fun getPrintName() = "${type.capitalize()} ${name.replace("Aufgabe ", "A")
+            .replace("Blatt ", "B").replace("Blatt", "B")}"
+
+    fun processMessage(message: Message) {
+        telegram = TelegramResource.UploadedTelegramResource(message.document.fileId)
+    }
+}
+
+sealed class TelegramResource {
+    abstract fun attach(name: String, command: SendDocument)
+
+    data class UploadedTelegramResource(val fileId: String) : TelegramResource() {
+        override fun attach(name: String, command: SendDocument) {
+            command.setDocument(fileId)
+        }
+    }
+
+    data class LocalTelegramResource(val bytes: ByteArray) : TelegramResource() {
+        override fun attach(name: String, command: SendDocument) {
+            command.setDocument(name, bytes.inputStream())
+        }
+    }
 }

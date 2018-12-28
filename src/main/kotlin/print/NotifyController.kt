@@ -18,39 +18,56 @@ import javax.servlet.http.HttpServletResponse
 @ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
 class NotifyController : HttpServlet() {
     private val bot = UniPrintBot()
-    private val resourceToTelegramFileId = mutableMapOf<IliasResource, String>()
+    private var resources = emptyMap<String, List<IliasResource>>()
 
-    override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-        val resources = NOTIFY_RESOURCE_LIST()
+    override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
+        // list current resources and fetch current etags / hashes
+        resources = NOTIFY_RESOURCE_LIST().mapValues { entry ->
+            val previousResources = resources[entry.key] ?: emptyList()
+            return@mapValues entry.value.mapNotNull { (name, url) ->
+                Ilias.downloadRefresh(entry.key, name, url, previousResources.firstOrNull { it.url == url })
+            }
+        }
+
+        // process for all users
         UserStorage.listUsers().forEach { user ->
-            val urlSet = UserIliasNotificationStorage.getByUser(user).map { notification ->
-                notification.getString("url")
-            }.toSet()
+            println("Processing ${user.key.name} ${user.getString("name")}")
+            val notifications = UserIliasNotificationStorage.getByUser(user)
+                    .map { it.getString("url") to it }.toMap()
+            resources.filterKeys { user.getBoolean("notify$it") }.values.flatten().forEach { resource ->
+                val notification = notifications[resource.url]
+                if (notification == null) {
+                    print("${resource.type} ${resource.name} new message ")
+                    val command = SendDocument().setChatId(user.key.name)
+                    resource.telegram.attach(resource.getPrintName(), command)
 
-            resources.filterKeys { user.getBoolean(it) }.values.flatten().filter {
-                !urlSet.contains(it.url)
-            }.forEach { resource ->
-                resourceToTelegramFileId.compute(resource) { _, fileId ->
                     try {
-                        val command = SendDocument()
-                                .setChatId(user.key.name)
-                                .setDocument(fileId)
-                        if (fileId == null) { // upload file to Telegram
-                            command.setDocument(resource.getPrintName(), Ilias.download(resource.url).inputStream())
-                        }
-
                         val message = bot.execute(command)
-                        UserIliasNotificationStorage.add(user, message.chatId, message.messageId, resource)
-                        return@compute message.document.fileId
+                        UserIliasNotificationStorage.add(user, message, resource)
+                        resource.processMessage(message)
+                        println(message.messageId)
                     } catch (e: TelegramApiException) {
-                        return@compute fileId
+                        e.printStackTrace()
                     }
+                } else if (notification.getString("hash") != resource.hash) {
+                    print("${resource.type} ${resource.name} changed from ${notification.getString("hash")} " +
+                            "in ${notification.getLong("messageId")} to ${resource.hash} message ")
+                    val command = SendDocument().setChatId(user.key.name)
+                            .setReplyToMessageId(notification.getLong("messageId").toInt())
+                    resource.telegram.attach(resource.getPrintName(), command)
+
+                    try {
+                        val message = bot.execute(command)
+                        UserIliasNotificationStorage.update(notification, message, resource)
+                        resource.processMessage(message)
+                        println(message.messageId)
+                    } catch (e: TelegramApiException) {
+                        e.printStackTrace()
+                    }
+                } else {
+                    println("${resource.type} ${resource.name} unchanged")
                 }
             }
         }
-    }
-
-    override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
-        doGet(req, resp)
     }
 }

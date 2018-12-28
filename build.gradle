@@ -24,7 +24,7 @@ apply plugin: 'com.google.cloud.tools.appengine'
 appengine {
     deploy {
         projectId 'uniprintbot'
-        version 'v1-0'
+        version 'v1-1'
     }
 }
 
@@ -52,7 +52,7 @@ dependencies {
 
 
 group 'de.mrk'
-version '1.0'
+version '1.1'
 
 sourceCompatibility = 1.8
 compileKotlin {
