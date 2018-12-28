@@ -24,13 +24,14 @@ apply plugin: 'com.google.cloud.tools.appengine'
 appengine {
     deploy {
         projectId 'uniprintbot'
-        version 'v1-1'
+        version 'v1-2'
     }
 }
 
 dependencies {
     compile 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.0'
+    compile 'org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.10'
 
     compile 'org.telegram:telegrambots:4.1'
     compile 'com.hierynomus:sshj:0.26.0'

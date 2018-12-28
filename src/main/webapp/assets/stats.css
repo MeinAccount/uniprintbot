@@ -1,0 +1,62 @@
+h1 {
+    text-align: center;
+}
+
+.center {
+    display: flex;
+}
+
+.center:before, .center:after {
+    content: '';
+    flex: 1;
+}
+
+#chart {
+    width: 405px;
+    height: 405px;
+}
+
+#chart + table td:nth-child(2) {
+    text-align: right;
+    border-right: none;
+    padding-right: 0;
+}
+
+#chart + table td:nth-child(3), #chart + table td:last-child {
+    text-align: right;
+}
+
+
+h1 a {
+    text-decoration: none;
+}
+
+
+table {
+    text-align: center;
+    border-collapse: collapse;
+}
+
+th {
+    font-weight: bold;
+}
+
+td {
+    padding: 5px;
+
+    border-right: 1px solid black;
+    border-bottom: 1px solid black;
+}
+
+td:last-child {
+    border-right: none;
+}
+
+tr:last-child > td {
+    border-bottom: none;
+}
+
+
+a, a:visited {
+    color: black;
+}
