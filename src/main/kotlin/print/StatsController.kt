@@ -8,9 +8,7 @@ import remote.UserStorage
 import remote.datastore
 import java.text.DecimalFormat
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.*
 import javax.servlet.annotation.HttpConstraint
@@ -52,14 +50,14 @@ class StatsController : HttpServlet() {
             }
 
             body {
-                h1 { text("@UniPrintBot Statistik") }
+                h1 { a("stats") { text("@UniPrintBot Statistik") } }
                 div("center") {
                     div { id = "chart" }
-
                     table {
-                        users.values.sortedByDescending { it.jobs.size }.map { user ->
+                        users.values.sortedWith(compareByDescending<UserStat> { it.jobs.size }
+                                .thenByDescending { it.totalSize }).map { user ->
                             tr {
-                                td { text(user.name) }
+                                td { a("stats?user=${user.userId}") { text(user.name) } }
                                 td { text("${user.jobs.size} Aufträge") }
                                 td("right") { text("(${String.format("%.2f", user.jobs.size * 100.0 / jobs.size)}%)") }
                                 td("right") { text(formatBytes(user.totalSize)) }
@@ -82,12 +80,15 @@ class StatsController : HttpServlet() {
                             tr {
                                 td { a("stats?user=${job.user.userId}") { text(job.user.name) } }
                                 td {
-                                    val utcLocalTime = LocalDateTime.ofEpochSecond(job.time.seconds, job.time.nanos, ZoneOffset.UTC)
+                                    val instant = job.time.toDate().toInstant()
                                     val offset = ZoneId.of("Europe/Berlin").rules.getOffset(Instant.now())
 
                                     // format the instant respecting the *current* (as in: not the daylight saving time
                                     // in use at the instant) daylight saving
-                                    text(dateFormatter.format(utcLocalTime.plusSeconds(offset.totalSeconds.toLong())))
+                                    time {
+                                        dateTime = DateTimeFormatter.ISO_INSTANT.format(instant)
+                                        text(dateFormatter.format(instant.atOffset(offset)))
+                                    }
                                 }
                                 td { a("download/${job.fileId}") { text(job.name) } }
                                 td("right") { text(job.readableSize()) }

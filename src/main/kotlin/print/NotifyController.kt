@@ -20,7 +20,7 @@ class NotifyController : HttpServlet() {
     private val bot = UniPrintBot()
     private var resources = emptyMap<String, List<IliasResource>>()
 
-    override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
+    override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         // list current resources and fetch current etags / hashes
         resources = NOTIFY_RESOURCE_LIST().mapValues { entry ->
             val previousResources = resources[entry.key] ?: emptyList()
@@ -69,5 +69,9 @@ class NotifyController : HttpServlet() {
                 }
             }
         }
+    }
+
+    override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
+        doGet(req, resp)
     }
 }
