@@ -127,10 +127,10 @@ new ApexCharts(document.querySelector('#chart'), {
 data class UserStat(val userId: String, val name: String,
                     var totalSize: Long = 0, val jobs: MutableList<JobStat> = LinkedList())
 
-
 data class JobStat(val user: UserStat, val fileId: String, val name: String, val size: Long, val time: Timestamp) {
     fun readableSize() = formatBytes(size)
 }
+
 
 private val units = arrayOf("B", "kB", "MB", "GB", "TB")
 private fun formatBytes(size: Long): String {
