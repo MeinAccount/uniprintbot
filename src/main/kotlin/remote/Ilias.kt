@@ -11,6 +11,7 @@ import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.*
 import java.net.HttpURLConnection
 import java.security.MessageDigest
+import java.util.function.Function
 import java.util.regex.Pattern
 import javax.xml.bind.DatatypeConverter
 
@@ -22,7 +23,7 @@ object Ilias {
                     .cookieJar(CookieStore()).build())
             .build().create(IliasAPI::class.java)
 
-    fun listIliasResourcesGoto(url: String): List<Pair<String, String>> {
+    fun listIliasResourcesGoto(url: String, nameShortener: (String) -> String): List<Pair<String, String>> {
         var response = ilias.download(url).execute().body()?.string()
         if (response?.contains("Inhalt") != true) {
             ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
@@ -34,8 +35,8 @@ object Ilias {
 
         val iliasResources = mutableListOf<Pair<String, String>>()
         while (matcher.find()) {
-            val nameShortened = matcher.group(2).trim().replace("Übungsblatt", "Blatt")
-            iliasResources.add("$nameShortened.pdf" to matcher.group(1).replace("&amp;", "&"))
+            iliasResources.add("${nameShortener.invoke(matcher.group(2).trim())}.pdf" to
+                    matcher.group(1).replace("&amp;", "&"))
         }
 
         return iliasResources.toList()
