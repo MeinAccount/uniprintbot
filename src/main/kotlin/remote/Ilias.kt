@@ -11,7 +11,6 @@ import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.*
 import java.net.HttpURLConnection
 import java.security.MessageDigest
-import java.util.function.Function
 import java.util.regex.Pattern
 import javax.xml.bind.DatatypeConverter
 

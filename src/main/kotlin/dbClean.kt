@@ -1,5 +1,4 @@
 import com.google.cloud.datastore.Entity
-import com.google.cloud.datastore.Query
 import remote.UserStorage
 import remote.datastore
 
