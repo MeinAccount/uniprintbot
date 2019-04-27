@@ -18,15 +18,15 @@ import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/heiko/daily")
 @ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
-class HeikoTuesdayController : HttpServlet() {
+class HeikoDailyController : HttpServlet() {
+    private val bot = lazy { HeikoNotificationBot() }
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-        HeikoNotificationBot().apply {
-            retrieveSDates().forEach {
-                if (extractLocalDate(it) == LocalDate.now()) {
-                    val chatId = it.getLong("chatId")
-                    execute(SendMessage(chatId, HEIKO_TODAY).setParseMode("Markdown"))
-                    execute(SendSticker().setSticker(positiveStickers.random()).setChatId(chatId))
-                }
+        retrieveSDates().forEach {
+            if (extractLocalDate(it) == LocalDate.now()) {
+                val chatId = it.getLong("chatId")
+
+                bot.value.execute(SendMessage(chatId, HEIKO_TODAY).setParseMode("Markdown"))
+                bot.value.execute(SendSticker().setSticker(positiveStickers.random()).setChatId(chatId))
             }
         }
     }
@@ -35,10 +35,11 @@ class HeikoTuesdayController : HttpServlet() {
 @WebServlet("/heiko/today")
 @ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
 class HeikoTodayController : HttpServlet() {
+    private val bot = lazy { HeikoNotificationBot() }
     override fun doGet(req: HttpServletRequest?, resp: HttpServletResponse?) {
         HeikoNotificationBot().apply {
-            execute(SendMessage(HEIKO_GROUP, HEIKO_TODAY).setParseMode("Markdown"))
-            execute(SendSticker().setSticker(positiveStickers.random()).setChatId(HEIKO_GROUP))
+            bot.value.execute(SendMessage(HEIKO_GROUP, HEIKO_TODAY).setParseMode("Markdown"))
+            bot.value.execute(SendSticker().setSticker(positiveStickers.random()).setChatId(HEIKO_GROUP))
         }
     }
 }
@@ -47,17 +48,16 @@ class HeikoTodayController : HttpServlet() {
 @WebServlet("/heiko/cleanup")
 @ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
 class HeikoCleanupController : HttpServlet() {
+    private val bot = lazy { HeikoNotificationBot() }
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-        HeikoNotificationBot().apply {
-            retrieveSDates().forEach {
-                if (extractLocalDate(it) < LocalDate.now()) {
-                    val chatId = it.getLong("chatId")
-                    datastore.delete(it.key)
+        retrieveSDates().forEach {
+            if (extractLocalDate(it) < LocalDate.now()) {
+                val chatId = it.getLong("chatId")
+                datastore.delete(it.key)
 
-                    val chat = execute(GetChat(chatId))
-                    if (chat.pinnedMessage.messageId == it.getInt("messageId") + 1) {
-                        execute(UnpinChatMessage(chatId))
-                    }
+                val chat = bot.value.execute(GetChat(chatId))
+                if (chat.pinnedMessage.messageId == it.getInt("messageId") + 1) {
+                    bot.value.execute(UnpinChatMessage(chatId))
                 }
             }
         }
@@ -65,7 +65,7 @@ class HeikoCleanupController : HttpServlet() {
 }
 
 
-private fun extractLocalDate(entity: Entity) =
+fun extractLocalDate(entity: Entity): LocalDate =
         LocalDate.of(entity.getInt("year"), entity.getInt("month"), entity.getInt("day"))
 
 private fun Entity.getInt(name: String) = getLong(name).toInt()

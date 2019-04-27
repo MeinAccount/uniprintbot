@@ -20,8 +20,8 @@
 	</cron>
 
 	<cron>
-		<url>/cedric/today</url>
-		<schedule>every wednesday 17:30</schedule>
+		<url>/cedric/daily</url>
+		<schedule>every day 17:30</schedule>
 		<timezone>Europe/Berlin</timezone>
 	</cron>
 </cronentries>
