@@ -41,13 +41,14 @@ object Ilias {
         return iliasResources.toList()
     }
 
-    fun listWebResources(baseUrl: String, regex: String): List<Pair<String, String>> {
+    fun listWebResources(downloadUrl: String, regex: String, baseUrl: String = downloadUrl,
+                         nameShortener: (String) -> String): List<Pair<String, String>> {
         val matcher = Pattern.compile(regex)
-                .matcher(ilias.download(baseUrl).execute().body()?.string())
+                .matcher(ilias.download(downloadUrl).execute().body()?.string())
 
         val iliasResources = mutableListOf<Pair<String, String>>()
         while (matcher.find()) {
-            iliasResources.add("${matcher.group(2)}.pdf" to baseUrl + matcher.group(1))
+            iliasResources.add("${nameShortener.invoke(matcher.group(2))}.pdf" to baseUrl + matcher.group(1))
         }
 
         return iliasResources.toList()
