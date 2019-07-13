@@ -56,10 +56,10 @@ object Ilias {
 
 
     fun downloadRefresh(type: String, name: String, url: String, previous: IliasResource?): IliasResource? {
-        var response = ilias.download(url, previous?.hash).execute()
+        var response = ilias.download(url).execute()
         if (response.raw().request().url().encodedPath().contains("login")) {
             ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
-            response = ilias.download(url, previous?.hash).execute()
+            response = ilias.download(url).execute()
         }
 
         if (previous != null && response.code() == HttpURLConnection.HTTP_NOT_MODIFIED) {
@@ -67,8 +67,7 @@ object Ilias {
             return previous.copy(name = name)
         } else if (response.isSuccessful) {
             val bytes = response.body()!!.bytes()
-            val hash = response.headers()["ETag"]
-                    ?: DatatypeConverter.printHexBinary(MessageDigest.getInstance("MD5").digest(bytes))
+            val hash = DatatypeConverter.printHexBinary(MessageDigest.getInstance("MD5").digest(bytes))
 
             if (previous != null && previous.hash == hash) {
                 println("$type $name unchaged MD5 $hash")
@@ -97,7 +96,7 @@ object Ilias {
                      @Query("target") target: String): Call<String>
 
         @GET
-        fun download(@Url url: String, @Header("If-None-Match") etag: String? = null): Call<ResponseBody>
+        fun download(@Url url: String): Call<ResponseBody>
     }
 
     private data class CookieStore(private var cookies: List<Cookie> = emptyList()) : CookieJar {

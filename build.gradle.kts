@@ -16,7 +16,7 @@ plugins {
     java
     war
 
-    kotlin("jvm") version "1.3.30"
+    kotlin("jvm") version "1.3.40"
 }
 
 group = "de.mrk"
