@@ -22,7 +22,7 @@ object Ilias {
                     .cookieJar(CookieStore()).build())
             .build().create(IliasAPI::class.java)
 
-    fun listIliasResourcesGoto(url: String, nameShortener: (String) -> String): List<Pair<String, String>> {
+    fun listIliasResourcesGoto(url: String, nameShortener: (String) -> String = { it }): List<Pair<String, String>> {
         var response = ilias.download(url).execute().body()?.string()
         if (response?.contains("Inhalt") != true) {
             ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
@@ -42,7 +42,7 @@ object Ilias {
     }
 
     fun listWebResources(downloadUrl: String, regex: String, baseUrl: String = downloadUrl,
-                         nameShortener: (String) -> String): List<Pair<String, String>> {
+                         nameShortener: (String) -> String = { it }): List<Pair<String, String>> {
         val matcher = Pattern.compile(regex)
                 .matcher(ilias.download(downloadUrl).execute().body()?.string())
 
@@ -66,15 +66,19 @@ object Ilias {
             println("$type $name unchanged ${previous.hash}")
             return previous.copy(name = name)
         } else if (response.isSuccessful) {
-            val bytes = response.body()!!.bytes()
-            val hash = DatatypeConverter.printHexBinary(MessageDigest.getInstance("MD5").digest(bytes))
+            val hash = DatatypeConverter.printHexBinary(MessageDigest.getInstance("MD5")
+                    .digest(response.body()!!.bytes()))
 
-            if (previous != null && previous.hash == hash) {
+            return if (previous != null && previous.hash == hash) {
                 println("$type $name unchaged MD5 $hash")
-                return previous.copy(name = name)
+                previous.copy(name = name)
             } else {
                 println("$type $name ${previous?.let { "changed ${it.hash}" } ?: "uncached"} $hash")
-                return IliasResource(type, name, url, hash, TelegramResource.LocalTelegramResource(bytes))
+
+                IliasResource(type, name, url, hash, TelegramResource.RemoteTelegramResource {
+                    // TODO: handle download failure
+                    ilias.download(url).execute().body()!!.byteStream()
+                })
             }
         }
 

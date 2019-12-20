@@ -6,6 +6,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendDocument
 import org.telegram.telegrambots.meta.api.objects.Message
 import java.io.File
 import java.io.FileInputStream
+import java.io.InputStream
 
 internal val datastore = DatastoreOptions.newBuilder()
         .setCredentials(GoogleCredentials.fromStream(
@@ -33,9 +34,9 @@ sealed class TelegramResource {
         }
     }
 
-    data class LocalTelegramResource(val bytes: ByteArray) : TelegramResource() {
+    data class RemoteTelegramResource(val downloader: () -> InputStream) : TelegramResource() {
         override fun attach(name: String, command: SendDocument) {
-            command.setDocument(name, bytes.inputStream())
+            command.setDocument(name, downloader())
         }
     }
 }

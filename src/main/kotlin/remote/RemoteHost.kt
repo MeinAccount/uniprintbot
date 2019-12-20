@@ -23,7 +23,7 @@ object RemoteHost {
 
     private fun printCommand(path: String, user: Entity? = null) =
             "echo \"$path von ${user?.getString("name")} am ${Date()}\" >> log; " +
-                    "lp -d fsmathd -o sides=two-sided-long-edge $path"
+                    "lp -d fsmath -o sides=two-sided-long-edge $path"
 
 
     fun printTelegramFile(user: Entity, file: File) {
