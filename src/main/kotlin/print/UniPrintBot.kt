@@ -46,11 +46,14 @@ class UniPrintBot : TelegramLongPollingBot() {
     private fun processMessage(message: Message, user: Entity) {
         if (message.hasText()) {
             when (message.text.toLowerCase()) { // process commands
-                "/start" ->
+                "/start" -> {
                     executeSafe(SendMessage(message.chatId,
                             "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken.\n" +
                                     "*Warnung:* Dieser Bot druckt in der Fachschaft. Mit der Nutzung dieses Bots sicher ihr mir zu, dies sparsam und den üblichen Regeln entsprechend zu verwenden.")
                             .setParseMode("Markdown"))
+                    executeSafe(SendMessage(message.chatId, "Willst du automatisch Übungsblätter bekommen?")
+                            .setReplyMarkup(getEditKeyboard(user)))
+                }
 
                 "/cancel" -> {
                     try {
@@ -134,7 +137,10 @@ class UniPrintBot : TelegramLongPollingBot() {
             QueueFactory.getDefaultQueue().add(TaskOptions.Builder.withUrl("/notify"))
 
             executeSafe(DeleteMessage(callbackQuery.message.chatId, callbackQuery.message.messageId))
-            executeSafe(DeleteMessage(callbackQuery.message.chatId, callbackQuery.message.replyToMessage.messageId))
+            callbackQuery.message.replyToMessage?.let {
+                executeSafe(DeleteMessage(callbackQuery.message.chatId, it.messageId))
+            }
+
             executeSafe(SendChatAction(callbackQuery.message.chatId, "upload_document"))
         }
     }
