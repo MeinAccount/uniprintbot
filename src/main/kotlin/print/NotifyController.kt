@@ -22,10 +22,10 @@ class NotifyController : HttpServlet() {
 
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         // list current resources and fetch current etags / hashes
-        resources = NOTIFY_RESOURCE_LIST().mapValues { entry ->
-            val previousResources = resources[entry.key] ?: emptyList()
-            return@mapValues entry.value.mapNotNull { (name, url) ->
-                Ilias.downloadRefresh(entry.key, name, url, previousResources.firstOrNull { it.url == url })
+        resources = NOTIFY_RESOURCE_LIST.associate { origin ->
+            val previousResources = resources[origin.dbName] ?: emptyList()
+            return@associate origin.dbName to origin.retrieve().mapNotNull { (name, url) ->
+                Ilias.downloadRefresh(origin.dbName, name, url, previousResources.firstOrNull { it.url == url })
             }
         }
 

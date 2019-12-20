@@ -1,10 +1,12 @@
 package print
 
 import BOT_TOKEN
+import NOTIFY_RESOURCE_LIST
 import com.google.appengine.api.taskqueue.QueueFactory
 import com.google.appengine.api.taskqueue.TaskOptions
 import com.google.cloud.datastore.Entity
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.GetFile
 import org.telegram.telegrambots.meta.api.methods.send.SendChatAction
@@ -74,7 +76,15 @@ class UniPrintBot : TelegramLongPollingBot() {
                                 "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken."))
                     }
 
-                "/recheck" -> QueueFactory.getDefaultQueue().add(TaskOptions.Builder.withUrl("/notify"))
+                "/edit" ->
+                    executeSafe(SendMessage(message.chatId, "Welche Blätter willst du bekommen?")
+                            .setReplyToMessageId(message.messageId)
+                            .setReplyMarkup(getEditKeyboard(user)))
+
+                "/recheck" -> {
+                    QueueFactory.getDefaultQueue().add(TaskOptions.Builder.withUrl("/notify"))
+                    executeSafe(SendChatAction(message.chatId, "upload_document"))
+                }
 
                 else -> executeSafe(SendMessage(message.chatId, "Ich habe dich leider nicht verstanden."))
             }
@@ -109,9 +119,33 @@ class UniPrintBot : TelegramLongPollingBot() {
                 printTelegramFile(user, callbackQuery.message.replyToMessage.document, callbackQuery.message)
                 executeSafe(DeleteMessage(callbackQuery.message.chatId, callbackQuery.message.messageId))
             }
-        }
+        } else if (callbackQuery.data.startsWith("toggleNotify|")) {
+            val newUser = UserStorage.toggleUserNotify(user, "notify" + callbackQuery.data.drop(13))
+            executeSafe(AnswerCallbackQuery().setCallbackQueryId(callbackQuery.id))
+            executeSafe(EditMessageReplyMarkup()
+                    .setChatId(callbackQuery.message.chatId)
+                    .setMessageId(callbackQuery.message.messageId)
+                    .setReplyMarkup(getEditKeyboard(newUser)))
+        } else if (callbackQuery.data == "notifyUpdate") {
+            QueueFactory.getDefaultQueue().add(TaskOptions.Builder.withUrl("/notify"))
 
-        // TODO: handle unknown or invalid stuff
+            executeSafe(DeleteMessage(callbackQuery.message.chatId, callbackQuery.message.messageId))
+            executeSafe(DeleteMessage(callbackQuery.message.chatId, callbackQuery.message.replyToMessage.messageId))
+            executeSafe(SendChatAction(callbackQuery.message.chatId, "upload_document"))
+        }
+    }
+
+
+    private fun getEditKeyboard(user: Entity): InlineKeyboardMarkup {
+        val keyboard = InlineKeyboardMarkup()
+        keyboard.keyboard = NOTIFY_RESOURCE_LIST.map {
+            val notify = user.getBoolean("notify" + it.dbName)
+            listOf(InlineKeyboardButton("${if (notify) "☑" else "☐"} ${it.name}")
+                    .setCallbackData("toggleNotify|" + it.dbName))
+        }.plusElement(listOf(InlineKeyboardButton("Jetzt Blätter abrufen!")
+                .setCallbackData("notifyUpdate")))
+
+        return keyboard
     }
 
 

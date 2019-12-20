@@ -11,6 +11,15 @@ object UserStorage {
             .setKind("User")
             .newKey(userId.toString()))
 
+    fun toggleUserNotify(user: Entity, field: String): Entity {
+        val newUser = Entity.newBuilder(user)
+                .set(field, if (user.contains(field)) !user.getBoolean(field) else true).build()
+
+        datastore.update(newUser)
+        return newUser
+    }
+
+
     fun listUsers() = datastore.run(Query.newEntityQueryBuilder()
             .setKind("User")
             .build()).iterator()

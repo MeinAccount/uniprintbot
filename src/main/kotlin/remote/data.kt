@@ -40,3 +40,5 @@ sealed class TelegramResource {
         }
     }
 }
+
+data class ResourceOrigin(val name: String, val dbName: String, val retrieve: () -> List<Pair<String, String>>)
