@@ -5,6 +5,11 @@
 		<description>Notifies users about new resources</description>
 		<schedule>every 1 hours</schedule>
 	</cron>
+	<cron>
+		<url>/notify</url>
+		<description>Purges printed messages after 24 hours</description>
+		<schedule>every day 6:15</schedule>
+	</cron>
 
 	<cron>
 		<url>/heiko/cleanup</url>
