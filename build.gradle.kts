@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.google.cloud.tools:appengine-gradle-plugin:2.0.0-rc6")
+        classpath("com.google.cloud.tools:appengine-gradle-plugin:2.2.0")
     }
 }
 
@@ -30,6 +30,7 @@ tasks.withType<KotlinCompile> {
 // setup appengine
 apply(plugin = "com.google.cloud.tools.appengine")
 configure<AppEngineStandardExtension> {
+    stage.enableJarClasses = true
     deploy.projectId = "uniprintbot"
     deploy.version = "v${project.version.toString().replace(".", "-")}"
 }
@@ -43,23 +44,23 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3")
-    compile("org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.10")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.10")
 
-    compile("org.telegram:telegrambots:4.2")
-    compile("com.hierynomus:sshj:0.27.0")
-    compile("org.slf4j:slf4j-simple:1.7.26")
+    implementation("org.telegram:telegrambots:4.4.0.2")
+    implementation("com.hierynomus:sshj:0.27.0")
+    implementation("org.slf4j:slf4j-simple:1.7.30")
 
-    compile("com.squareup.retrofit2:retrofit:2.5.0")
-    compile("com.squareup.retrofit2:converter-scalars:2.5.0")
+    implementation("com.squareup.retrofit2:retrofit:2.7.0")
+    implementation("com.squareup.retrofit2:converter-scalars:2.7.0")
 
 
-    compile("com.google.cloud:google-cloud-datastore:1.70.0")
-    compile("com.google.cloud:google-cloud-language:1.70.0")
-    compile("com.google.appengine:appengine-api-1.0-sdk:1.9.73")
-    add("providedCompile", "javax.servlet:javax.servlet-api:4.0.1")
+    implementation("com.google.cloud:google-cloud-datastore:1.102.0")
+    implementation("com.google.cloud:google-cloud-language:1.99.0")
+    implementation("com.google.appengine:appengine-api-1.0-sdk:1.9.77")
+    add("providedCompile", "javax.servlet:javax.servlet-api:3.1.0")
 
-    testCompile("com.google.appengine:appengine-testing:+")
-    testCompile("com.google.appengine:appengine-api-stubs:+")
-    testCompile("com.google.appengine:appengine-tools-sdk:+")
+    testImplementation("com.google.appengine:appengine-testing:+")
+    testImplementation("com.google.appengine:appengine-api-stubs:+")
+    testImplementation("com.google.appengine:appengine-tools-sdk:+")
 }
