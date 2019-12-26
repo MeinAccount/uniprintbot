@@ -6,6 +6,7 @@ import ILIAS_PASSWORD
 import ILIAS_USER
 import okhttp3.*
 import retrofit2.Call
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.*
@@ -56,12 +57,7 @@ object Ilias {
 
 
     fun downloadRefresh(type: String, name: String, url: String, previous: IliasResource?): IliasResource? {
-        var response = ilias.download(url).execute()
-        if (response.raw().request().url().encodedPath().contains("login")) {
-            ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
-            response = ilias.download(url).execute()
-        }
-
+        val response = downloadURL(url)
         if (previous != null && response.code() == HttpURLConnection.HTTP_NOT_MODIFIED) {
             println("$type $name unchanged ${previous.hash}")
             return previous.copy(name = name)
@@ -77,7 +73,7 @@ object Ilias {
 
                 IliasResource(type, name, url, hash, TelegramResource.RemoteTelegramResource {
                     // TODO: handle download failure
-                    ilias.download(url).execute().body()!!.byteStream()
+                    downloadURL(url).body()!!.byteStream()
                 })
             }
         }
@@ -85,6 +81,16 @@ object Ilias {
         println("Failed to fetch $type $name!")
         println(response)
         return null
+    }
+
+    fun downloadURL(url: String): Response<ResponseBody> {
+        val response = ilias.download(url).execute()
+        if (response.raw().request().url().encodedPath().contains("login")) {
+            ilias.login(ILIAS_USER, ILIAS_PASSWORD, "Anmelden").execute()
+            return ilias.download(url).execute()
+        }
+
+        return response
     }
 
 

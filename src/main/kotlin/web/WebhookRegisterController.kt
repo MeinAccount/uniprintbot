@@ -15,7 +15,8 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/webhook/register")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
+@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
 class WebhookRegisterController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         PrintBotWebhook().setWebhook("https://uniprintbot.appspot.com/$BOT_PATH", null);

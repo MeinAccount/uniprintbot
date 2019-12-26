@@ -21,6 +21,14 @@ object UserStorage {
         return newUser
     }
 
+    fun setName(user: Entity, name: String): Entity {
+        val newUser = Entity.newBuilder(user)
+                .set("name", name).build()
+
+        datastore.update(newUser)
+        return newUser
+    }
+
 
     fun listUsers() = datastore.run(Query.newEntityQueryBuilder()
             .setKind("User")

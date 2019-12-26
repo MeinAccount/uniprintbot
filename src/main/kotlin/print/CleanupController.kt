@@ -12,7 +12,8 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/cleanup")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
+@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
 class CleanupController : HttpServlet() {
     private val bot = UniPrintBot()
 

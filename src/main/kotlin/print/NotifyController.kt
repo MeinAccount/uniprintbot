@@ -15,7 +15,8 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/notify")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin")))
+@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
 class NotifyController : HttpServlet() {
     private val bot = UniPrintBot()
     private var resources = emptyMap<String, List<IliasResource>>()

@@ -16,7 +16,7 @@ plugins {
     java
     war
 
-    kotlin("jvm") version "1.3.40"
+    kotlin("jvm") version "1.3.61"
 }
 
 group = "de.mrk"
@@ -43,7 +43,7 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.2.0")
+    compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3")
     compile("org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.10")
 
     compile("org.telegram:telegrambots:4.2")

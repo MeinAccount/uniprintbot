@@ -7,6 +7,8 @@ import heiko.HeikoNotificationBot
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.objects.Update
 import print.UniPrintBot
+import javax.servlet.annotation.HttpConstraint
+import javax.servlet.annotation.ServletSecurity
 import javax.servlet.annotation.WebServlet
 import javax.servlet.http.HttpServlet
 import javax.servlet.http.HttpServletRequest
@@ -24,7 +26,9 @@ abstract class AbstractWebhookController(private val bot: TelegramLongPollingBot
 }
 
 @WebServlet("/$BOT_PATH")
+@ServletSecurity(HttpConstraint(transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
 class PrintWebhookController : AbstractWebhookController(UniPrintBot())
 
 @WebServlet("/$HEIKO_PATH")
+@ServletSecurity(HttpConstraint(transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
 class HeikoWebhookController : AbstractWebhookController(HeikoNotificationBot())

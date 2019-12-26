@@ -3,8 +3,13 @@
 	<threadsafe>true</threadsafe>
 	<runtime>java8</runtime>
 	<url-stream-handler>urlfetch</url-stream-handler>
+	<sessions-enabled>true</sessions-enabled>
 
 	<static-files>
 		<include path="assets/**"/>
 	</static-files>
+
+	<env-variables>
+		<env-var name="DEFAULT_ENCODING" value="UTF-8"/>
+	</env-variables>
 </appengine-web-app>

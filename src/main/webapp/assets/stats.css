@@ -1,4 +1,4 @@
-h1 {
+h1, h2 {
     text-align: center;
 }
 
@@ -33,23 +33,28 @@ table {
     border-collapse: collapse;
 }
 
-td {
+td, th {
     padding: 5px;
+    transition: background-color ease-in 10s;
 
     border-right: 1px solid black;
     border-bottom: 1px solid black;
 }
 
-td.right {
-    text-align: right;
-}
-
-td:last-child {
+td:last-child, th:last-child {
     border-right: none;
 }
 
 tr:last-child > td {
     border-bottom: none;
+}
+
+td.right, th.right {
+    text-align: right;
+}
+
+td.highlight, th.highlight {
+    background-color: limegreen;
 }
 
 
