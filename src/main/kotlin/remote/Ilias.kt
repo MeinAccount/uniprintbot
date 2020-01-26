@@ -62,6 +62,7 @@ object Ilias {
             println("$type $name unchanged ${previous.hash}")
             return previous.copy(name = name)
         } else if (response.isSuccessful) {
+            println("  downloaded from ${response.raw().request().url().encodedPath()}")
             val hash = DatatypeConverter.printHexBinary(MessageDigest.getInstance("MD5")
                     .digest(response.body()!!.bytes()))
 

@@ -34,6 +34,16 @@ object UserIliasNotificationStorage {
                 .set("name", resource.name)
                 .set("hash", resource.hash)
                 .set("time", Timestamp.now())
+                .remove("hash2")
                 .build())
+    }
+
+
+    fun updateHash2(notification: Entity, hash: String) {
+        datastore.update(Entity.newBuilder(notification).set("hash2", hash).build())
+    }
+
+    fun removeHash2(notification: Entity) {
+        datastore.update(Entity.newBuilder(notification).remove("hash2").build())
     }
 }
