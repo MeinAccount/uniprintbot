@@ -36,7 +36,9 @@ class NotifyController : HttpServlet() {
             println("Processing ${user.key.name} ${user.getString("name")}")
             val notifications = UserIliasNotificationStorage.getByUser(user)
                     .map { it.getString("url") to it }.toMap()
-            resources.filterKeys { user.getBoolean("notify$it") }.values.flatten().forEach { resource ->
+            resources.filterKeys {
+                user.getOptionalBool("notify$it") ?: false
+            }.values.flatten().forEach { resource ->
                 val notification = notifications[resource.url]
                 when {
                     notification == null -> sendNew(resource, user)
@@ -104,3 +106,4 @@ class NotifyController : HttpServlet() {
 }
 
 fun Entity.getOptionalString(name: String) = if (contains(name)) getString(name) else null
+fun Entity.getOptionalBool(name: String) = if (contains(name)) getBoolean(name) else null
