@@ -4,16 +4,18 @@
 		<url>/notify</url>
 		<description>Notifies users about new resources</description>
 		<schedule>every 1 hours</schedule>
+		<timezone>Europe/Berlin</timezone>
 	</cron>
 	<cron>
 		<url>/cleanup</url>
 		<description>Purges printed messages after 24 hours</description>
 		<schedule>every day 6:15</schedule>
+		<timezone>Europe/Berlin</timezone>
 	</cron>
 
 	<cron>
 		<url>/heiko/cleanup</url>
-		<description>Notifies Heiko about important stuff!</description>
+		<description>Cleans up Heiko stuff</description>
 		<schedule>every day 2:00</schedule>
 		<timezone>Europe/Berlin</timezone>
 	</cron>
@@ -21,6 +23,11 @@
 		<url>/heiko/daily</url>
 		<description>Notifies Heiko about important stuff!</description>
 		<schedule>every day 10:00</schedule>
+		<timezone>Europe/Berlin</timezone>
+	</cron>
+	<cron>
+		<url>/heiko/poll</url>
+		<schedule>every sunday 17:13</schedule>
 		<timezone>Europe/Berlin</timezone>
 	</cron>
 

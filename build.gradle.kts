@@ -47,7 +47,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3")
     implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.10")
 
-    implementation("org.telegram:telegrambots:4.4.0.2")
+    implementation("org.telegram:telegrambots:4.9")
     implementation("com.hierynomus:sshj:0.27.0")
     implementation("org.slf4j:slf4j-simple:1.7.30")
 
