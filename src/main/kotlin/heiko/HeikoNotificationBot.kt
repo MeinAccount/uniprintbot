@@ -1,6 +1,7 @@
 package heiko
 
 import HEIKO_FORCE_USER
+import HEIKO_GROUP
 import HEIKO_TOKEN
 import com.google.api.gax.core.FixedCredentialsProvider
 import com.google.auth.oauth2.GoogleCredentials
@@ -40,6 +41,15 @@ class HeikoNotificationBot : TelegramLongPollingBot() {
             } else if (update.message.hasSticker() && update.message.chatId == -1001374318263L) {
                 execute(SendMessage(update.message.chatId, "Sticker fileId ${update.message.sticker.fileId}")
                         .setReplyToMessageId(update.message.messageId))
+            }
+        } else if (update.hasPollAnswer()) {
+            // Bots receive new votes only in polls that were sent by the bot itself
+            if (update.pollAnswer.optionIds.size > 1 && update.pollAnswer.optionIds.contains(7)) {
+                val name = listOfNotNull(update.pollAnswer.user.firstName, update.pollAnswer.user.lastName)
+                        .joinToString(" ")
+                        .ifEmpty { update.pollAnswer.user.userName }
+                execute(SendMessage(HEIKO_GROUP, "Was soll das [$name](tg://user?id=${update.pollAnswer.user.id})? Ich bin verwirrt\\.\\.\\.")
+                        .setParseMode("MarkdownV2"))
             }
         }
     }
