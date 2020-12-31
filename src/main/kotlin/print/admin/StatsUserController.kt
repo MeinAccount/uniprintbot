@@ -13,23 +13,34 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/stats/*")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
-        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
+@ServletSecurity(
+    HttpConstraint(
+        rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL
+    )
+)
 class StatsUserController : StatsController() {
-    override fun FlowContent.content(req: HttpServletRequest, users: Map<String, UserStat>, jobs: List<JobStat>) {
+    override fun FlowContent.content(
+        req: HttpServletRequest,
+        users: Map<String, UserStat>,
+        jobs: List<JobStat>,
+        yearSuffix: String
+    ) {
         val userID = req.pathInfo.drop(1)
         h1 {
-            a("/stats") {
+            a("/stats$yearSuffix") {
                 text("Letzte Druckaufträge von ${users[userID]?.name ?: "unbekannt"}")
             }
         }
 
-        listJobs(users[userID]?.jobs ?: emptyList())
+        listJobs(users[userID]?.jobs ?: emptyList(), yearSuffix)
 
         userID.toIntOrNull()?.let(UserStorage::getUser)?.let { user ->
             val notifications = UserIliasNotificationStorage.getByUser(user).map {
-                NotificationData(it.getString("name"), it.getString("type"), it.getTimestamp("time"),
-                        it.getString("hash"), it.getLong("messageId"), it.getString("url"))
+                NotificationData(
+                    it.getString("name"), it.getString("type"), it.getTimestamp("time"),
+                    it.getString("hash"), it.getLong("messageId"), it.getString("url")
+                )
             }.groupBy { it.dbName }
 
             div {
@@ -43,7 +54,9 @@ class StatsUserController : StatsController() {
                             messages.sortedBy { it.time }.forEach {
                                 tr {
                                     td {
-                                        a(href = "/download-ilias?url=${URLEncoder.encode(it.url, "UTF-8")}&name=${URLEncoder.encode(it.name, "UTF-8")}") {
+                                        val url = URLEncoder.encode(it.url, "UTF-8")
+                                        val name = URLEncoder.encode(it.name, "UTF-8")
+                                        a(href = "/download-ilias?url=$url&name=$name") {
                                             text(it.name)
                                         }
                                     }
@@ -79,5 +92,7 @@ class StatsUserController : StatsController() {
 }
 
 
-internal data class NotificationData(val name: String, val dbName: String, val time: Timestamp,
-                                     val hash: String, val messageID: Long, val url: String)
+internal data class NotificationData(
+    val name: String, val dbName: String, val time: Timestamp,
+    val hash: String, val messageID: Long, val url: String
+)

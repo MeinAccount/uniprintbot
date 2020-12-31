@@ -23,10 +23,15 @@ fun htmlTemplate(resp: HttpServletResponse, title: String, content: BODY.() -> U
     }
 }
 
-fun FlowOrHeadingContent.header() {
+fun FlowOrHeadingContent.header(yearFilter: Int? = null, yearSuffix: String = "") {
     h1 {
         text("@UniPrintBot ")
         a("/stats") { text("Statistik") }
+        if (yearFilter != null) {
+            text(" ")
+            a("/stats$yearSuffix") { text("Statistik $yearFilter") }
+        }
+
         text(" ")
         a("/management") { text("Verwaltung") }
     }

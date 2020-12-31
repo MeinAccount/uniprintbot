@@ -3,6 +3,9 @@ package print.admin
 import com.google.cloud.Timestamp
 import com.google.cloud.datastore.Query
 import com.google.cloud.datastore.StructuredQuery
+import com.google.cloud.datastore.StructuredQuery.CompositeFilter.and
+import com.google.cloud.datastore.StructuredQuery.PropertyFilter.ge
+import com.google.cloud.datastore.StructuredQuery.PropertyFilter.lt
 import kotlinx.html.*
 import remote.UserStorage
 import remote.datastore
@@ -19,21 +22,36 @@ import kotlin.math.pow
 
 
 @WebServlet("/stats")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
-        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
+@ServletSecurity(
+    HttpConstraint(
+        rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL
+    )
+)
 open class StatsController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         val users = UserStorage.listUsers().asSequence().map {
             it.key.name to UserStat(it.key.name, it.getString("name"))
         }.toMap()
 
-        val jobs = datastore.run(Query.newEntityQueryBuilder()
-                .setKind("PrintJob")
-                .setOrderBy(StructuredQuery.OrderBy.desc("time"))
-                .build()).asSequence().map {
+        val queryBuilder = Query.newEntityQueryBuilder()
+            .setKind("PrintJob")
+            .setOrderBy(StructuredQuery.OrderBy.desc("time"))
+        val yearFilter = req.getParameter("year")?.toIntOrNull()?.also {
+            val calendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Berlin"))
+            calendar.set(it, 1, 1)
+            val start = Timestamp.of(calendar.time)
+            calendar.set(it + 1, 1, 1)
+            queryBuilder.setFilter(and(ge("time", start), lt("time", Timestamp.of(calendar.time))))
+        }
+        val yearSuffix = if (yearFilter == null) "" else "?year=$yearFilter"
+
+        val jobs = datastore.run(queryBuilder.build()).asSequence().map {
             val user = users[it.key.parent.name]!!
-            JobStat(user, it.getString("fileId"), it.getString("fileName"),
-                    it.getLong("fileSize"), it.getTimestamp("time")).also { job ->
+            JobStat(
+                user, it.getString("fileId"), it.getString("fileName"),
+                it.getLong("fileSize"), it.getTimestamp("time")
+            ).also { job ->
                 user.totalSize += job.size
                 user.jobs.add(job)
             }
@@ -41,35 +59,37 @@ open class StatsController : HttpServlet() {
 
 
         htmlTemplate(resp, "@UniPrintBot Statistik") {
-            header()
+            header(yearFilter, yearSuffix)
             div("center") {
                 div { id = "chart" }
                 table {
-                    users.values.sortedWith(compareByDescending<UserStat> { it.jobs.size }
+                    users.values.filter { it.jobs.isNotEmpty() }
+                        .sortedWith(compareByDescending<UserStat> { it.jobs.size }
                             .thenByDescending { it.totalSize }).map { user ->
-                        tr {
-                            td { a("/stats/${user.userId}") { text(user.name) } }
-                            td { text("${user.jobs.size} Aufträge") }
-                            td("right") { text("(${String.format("%.2f", user.jobs.size * 100.0 / jobs.size)}%)") }
-                            td("right") { text(formatBytes(user.totalSize)) }
+                            tr {
+                                td { a("/stats/${user.userId}$yearSuffix") { text(user.name) } }
+                                td { text("${user.jobs.size} Aufträge") }
+                                td("right") { text("(${String.format("%.2f", user.jobs.size * 100.0 / jobs.size)}%)") }
+                                td("right") { text(formatBytes(user.totalSize)) }
+                            }
                         }
-                    }
                 }
             }
 
-            content(req, users, jobs)
+            content(req, users, jobs, yearSuffix)
 
             script(src = "https://cdn.jsdelivr.net/npm/apexcharts") { }
             script {
                 unsafe {
                     val (labels, series) = users.values.filter { it.jobs.size > 0 }
-                            .sortedBy { it.name }
-                            .fold("" to "") { (labels, series), user ->
-                                "$labels, \"${user.name}\"" to "$series, ${user.jobs.size}"
-                            }
+                        .sortedBy { it.name }
+                        .fold("" to "") { (labels, series), user ->
+                            "$labels, \"${user.name}\"" to "$series, ${user.jobs.size}"
+                        }
 
                     //language=JavaScript
-                    raw("""
+                    raw(
+                        """
 new ApexCharts(document.querySelector('#chart'), {
     chart: {
         width: 400,
@@ -77,25 +97,31 @@ new ApexCharts(document.querySelector('#chart'), {
     },
     labels: [MY_LABELS],
     series: [MY_VALUES]
-}).render();""".replace("MY_LABELS", labels.drop(2)).replace("MY_VALUES", series.drop(2)))
+}).render();""".replace("MY_LABELS", labels.drop(2)).replace("MY_VALUES", series.drop(2))
+                    )
                 }
             }
         }
     }
 
-    internal open fun FlowContent.content(req: HttpServletRequest, users: Map<String, UserStat>, jobs: List<JobStat>) {
+    internal open fun FlowContent.content(
+        req: HttpServletRequest,
+        users: Map<String, UserStat>,
+        jobs: List<JobStat>,
+        yearSuffix: String
+    ) {
         h1 {
-            a("/stats") { text("Letzte Druckaufträge") }
+            a("/stats$yearSuffix") { text("Letzte Druckaufträge") }
         }
-        listJobs(jobs)
+        listJobs(jobs, yearSuffix)
     }
 
-    internal fun FlowContent.listJobs(jobs: Iterable<JobStat>) {
+    internal fun FlowContent.listJobs(jobs: Iterable<JobStat>, yearSuffix: String) {
         div("center") {
             table {
                 jobs.map { job ->
                     tr {
-                        td { a("/stats/${job.user.userId}") { text(job.user.name) } }
+                        td { a("/stats/${job.user.userId}$yearSuffix") { text(job.user.name) } }
                         td { printTime(job.time) }
                         td { a("/download/${job.fileId}") { text(job.name) } }
                         td("right") { text(job.readableSize()) }
@@ -107,10 +133,18 @@ new ApexCharts(document.querySelector('#chart'), {
 }
 
 
-internal data class UserStat(val userId: String, val name: String,
-                             var totalSize: Long = 0, val jobs: MutableList<JobStat> = LinkedList())
+internal data class UserStat(
+    val userId: String, val name: String,
+    var totalSize: Long = 0, val jobs: MutableList<JobStat> = LinkedList()
+)
 
-internal data class JobStat(val user: UserStat, val fileId: String, val name: String, val size: Long, val time: Timestamp) {
+internal data class JobStat(
+    val user: UserStat,
+    val fileId: String,
+    val name: String,
+    val size: Long,
+    val time: Timestamp
+) {
     fun readableSize() = formatBytes(size)
 }
 
