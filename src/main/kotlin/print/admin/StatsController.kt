@@ -39,9 +39,9 @@ open class StatsController : HttpServlet() {
             .setOrderBy(StructuredQuery.OrderBy.desc("time"))
         val yearFilter = req.getParameter("year")?.toIntOrNull()?.also {
             val calendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Berlin"))
-            calendar.set(it, 1, 1)
+            calendar.set(it, 0, 1)
             val start = Timestamp.of(calendar.time)
-            calendar.set(it + 1, 1, 1)
+            calendar.set(it + 1, 0, 1)
             queryBuilder.setFilter(and(ge("time", start), lt("time", Timestamp.of(calendar.time))))
         }
         val yearSuffix = if (yearFilter == null) "" else "?year=$yearFilter"
