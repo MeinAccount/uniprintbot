@@ -2,7 +2,7 @@ import org.telegram.telegrambots.ApiContextInitializer
 import org.telegram.telegrambots.meta.TelegramBotsApi
 import print.UniPrintBot
 
-fun main(args: Array<String>) {
+fun main() {
     ApiContextInitializer.init()
 
     val api = TelegramBotsApi()

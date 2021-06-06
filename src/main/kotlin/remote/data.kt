@@ -7,6 +7,7 @@ import org.telegram.telegrambots.meta.api.objects.Message
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
+import java.util.*
 
 internal val datastore = DatastoreOptions.newBuilder()
         .setCredentials(GoogleCredentials.fromStream(
@@ -17,7 +18,7 @@ internal val datastore = DatastoreOptions.newBuilder()
 
 data class IliasResource(val type: String, val name: String, val url: String,
                          val hash: String, var telegram: TelegramResource) {
-    fun getPrintName() = "${type.capitalize()} ${name.replace("Aufgabe ", "A")
+    fun getPrintName() = "${type.replaceFirstChar { it.titlecase(Locale.getDefault()) }} ${name.replace("Aufgabe ", "A")
             .replace("Blatt ", "B").replace("Blatt", "B")}"
 
     fun processMessage(message: Message) {

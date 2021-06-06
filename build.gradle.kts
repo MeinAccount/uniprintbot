@@ -3,11 +3,10 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
     repositories {
-        jcenter()
         mavenCentral()
     }
     dependencies {
-        classpath("com.google.cloud.tools:appengine-gradle-plugin:2.2.0")
+        classpath("com.google.cloud.tools:appengine-gradle-plugin:2.4.1")
     }
 }
 
@@ -16,11 +15,12 @@ plugins {
     java
     war
 
-    kotlin("jvm") version "1.3.61"
+    kotlin("jvm") version "1.5.10"
 }
 
 group = "de.mrk"
-version = "1.2"
+version = "1.3"
+
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
@@ -38,26 +38,23 @@ configure<AppEngineStandardExtension> {
 
 // load dependencies
 repositories {
-    jcenter()
     mavenCentral()
 }
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.10")
+    implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.7.3")
 
-    implementation("org.telegram:telegrambots:4.9")
-    implementation("com.hierynomus:sshj:0.27.0")
+    implementation("org.telegram:telegrambots:4.9.2")
+    implementation("com.hierynomus:sshj:0.31.0")
     implementation("org.slf4j:slf4j-simple:1.7.30")
 
-    implementation("com.squareup.retrofit2:retrofit:2.7.0")
-    implementation("com.squareup.retrofit2:converter-scalars:2.7.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-scalars:2.9.0")
 
 
-    implementation("com.google.cloud:google-cloud-datastore:1.102.0")
-    implementation("com.google.cloud:google-cloud-language:1.99.0")
-    implementation("com.google.appengine:appengine-api-1.0-sdk:1.9.77")
+    implementation("com.google.cloud:google-cloud-datastore:1.106.5")
+    implementation("com.google.appengine:appengine-api-1.0-sdk:1.9.89")
     add("providedCompile", "javax.servlet:javax.servlet-api:3.1.0")
 
     testImplementation("com.google.appengine:appengine-testing:+")

@@ -25,6 +25,7 @@ import remote.RemoteHost
 import remote.UserStorage
 import java.io.IOException
 import java.io.Serializable
+import java.util.*
 
 class UniPrintBot : TelegramLongPollingBot() {
     override fun onUpdateReceived(update: Update) {
@@ -45,7 +46,7 @@ class UniPrintBot : TelegramLongPollingBot() {
 
     private fun processMessage(message: Message, user: Entity) {
         if (message.hasText()) {
-            when (message.text.toLowerCase()) { // process commands
+            when (message.text.lowercase(Locale.GERMANY)) { // process commands
                 "/start" -> {
                     executeSafe(SendMessage(message.chatId,
                             "Antworte auf eine PDF-Datei mit /print um diese erneut zu drucken.\n" +

@@ -65,15 +65,19 @@ class HeikoPollController : HttpServlet() {
             }
 
             val calendarWeek = WeekFields.of(Locale.GERMANY).weekOfWeekBasedYear()
-            val pollMessage = execute(SendPoll(HEIKO_GROUP,
-                    "Vor-Ort Spieleabend KW${weekStart.get(calendarWeek)}", sequence {
-                var day = weekStart
-                do {
-                    yield(day.format(formatter))
-                    day = day.plusDays(1)
-                } while (day.dayOfWeek != DayOfWeek.MONDAY)
-                yield("Diese Woche leider nicht")
-            }.toList()).setAnonymous(false).setAllowMultipleAnswers(true))
+            val pollMessage = execute(
+                SendPoll(
+                    HEIKO_GROUP, "Vor-Ort Spieleabend KW${weekStart.get(calendarWeek)}", sequence {
+                        var day = weekStart
+                        do {
+                            yield(day.format(formatter))
+                            day = day.plusDays(1)
+                        } while (day.dayOfWeek != DayOfWeek.MONDAY)
+                        yield("Diese Woche leider nicht")
+                        yield("Ich zähle als geimpft / genesen")
+                    }.toList()
+                ).setAnonymous(false).setAllowMultipleAnswers(true)
+            )
             execute(PinChatMessage(pollMessage.chatId, pollMessage.messageId))
         }
     }
@@ -101,6 +105,6 @@ class HeikoCleanupController : HttpServlet() {
 
 
 fun extractLocalDate(entity: Entity): LocalDate =
-        LocalDate.of(entity.getInt("year"), entity.getInt("month"), entity.getInt("day"))
+    LocalDate.of(entity.getInt("year"), entity.getInt("month"), entity.getInt("day"))
 
 private fun Entity.getInt(name: String) = getLong(name).toInt()
