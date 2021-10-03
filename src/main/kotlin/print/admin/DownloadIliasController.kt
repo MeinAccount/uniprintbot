@@ -10,8 +10,12 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/download-ilias")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
-        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
+@ServletSecurity(
+    HttpConstraint(
+        rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL
+    )
+)
 class DownloadIliasController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         val url = req.getParameter("url")

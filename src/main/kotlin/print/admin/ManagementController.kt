@@ -13,8 +13,12 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/management")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
-        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
+@ServletSecurity(
+    HttpConstraint(
+        rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL
+    )
+)
 class ManagementController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         val users = UserStorage.listUsers().asSequence().map {
@@ -22,9 +26,9 @@ class ManagementController : HttpServlet() {
         }.toList()
 
         val token = req.session.getAttribute("token") as String?
-                ?: UUID.randomUUID().toString().also {
-                    req.session.setAttribute("token", it)
-                }
+            ?: UUID.randomUUID().toString().also {
+                req.session.setAttribute("token", it)
+            }
 
         val orderBy = req.getParameter("orderBy") ?: "name"
         req.getParameter("desc") != null
@@ -110,7 +114,7 @@ setTimeout(() => {
 
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
         val token = req.session.getAttribute("token") as String?
-        val user = req.getParameter("userID")?.toIntOrNull()?.let(UserStorage::getUser)
+        val user = req.getParameter("userID")?.toLongOrNull()?.let(UserStorage::getUser)
         val field = req.getParameter("field")
 
         when {

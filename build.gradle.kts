@@ -45,7 +45,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.7.3")
 
-    implementation("org.telegram:telegrambots:4.9.2")
+    implementation("org.telegram:telegrambots:5.3.0")
     implementation("com.hierynomus:sshj:0.31.0")
     implementation("org.slf4j:slf4j-simple:1.7.30")
 

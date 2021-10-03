@@ -11,13 +11,17 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/download/*")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
-        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
+@ServletSecurity(
+    HttpConstraint(
+        rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL
+    )
+)
 class DownloadFileController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         val bot = UniPrintBot()
 
-        val file = bot.execute(GetFile().setFileId(req.pathInfo.drop(1)))
+        val file = bot.execute(GetFile(req.pathInfo.drop(1)))
         resp.sendRedirect("https://api.telegram.org/file/bot$BOT_TOKEN/${file.filePath}")
     }
 }

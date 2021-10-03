@@ -29,7 +29,7 @@ class CedricDailyController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
         retrieveSDates().forEach {
             if (extractLocalDate(it) == LocalDate.now()) {
-                bot.value.execute(SendMessage(it.getLong("chatId"), CEDRIC_MESSAGE))
+                bot.value.execute(SendMessage(it.getLong("chatId").toString(), CEDRIC_MESSAGE))
             }
         }
     }

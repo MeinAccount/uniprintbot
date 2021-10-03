@@ -7,6 +7,8 @@ fun main() {
     print("Text to send: ")
     val text = readLine()
     if (text != null) {
-        println(bot.execute(SendMessage(HEIKO_GROUP, text).setParseMode("Markdown")))
+        println(bot.execute(SendMessage(HEIKO_GROUP, text).apply {
+            parseMode = "Markdown"
+        }))
     }
 }

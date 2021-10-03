@@ -6,6 +6,7 @@ import HEIKO_PATH
 import HEIKO_TOKEN
 import org.telegram.telegrambots.bots.TelegramWebhookBot
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
+import org.telegram.telegrambots.meta.api.methods.updates.SetWebhook
 import org.telegram.telegrambots.meta.api.objects.Update
 import javax.servlet.annotation.HttpConstraint
 import javax.servlet.annotation.ServletSecurity
@@ -15,12 +16,16 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/webhook/register")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
-        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
+@ServletSecurity(
+    HttpConstraint(
+        rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL
+    )
+)
 class WebhookRegisterController : HttpServlet() {
     override fun doGet(req: HttpServletRequest, resp: HttpServletResponse) {
-        PrintBotWebhook().setWebhook("https://uniprintbot.appspot.com/$BOT_PATH", null);
-        HeikoBotWebhook().setWebhook("https://uniprintbot.appspot.com/$HEIKO_PATH", null);
+        PrintBotWebhook().setWebhook(SetWebhook("https://uniprintbot.appspot.com/$BOT_PATH"))
+        HeikoBotWebhook().setWebhook(SetWebhook("https://uniprintbot.appspot.com/$HEIKO_PATH"))
         resp.writer.println("Success")
     }
 

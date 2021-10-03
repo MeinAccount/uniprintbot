@@ -12,8 +12,12 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/cleanup")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
-        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
+@ServletSecurity(
+    HttpConstraint(
+        rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL
+    )
+)
 class CleanupController : HttpServlet() {
     private val bot = UniPrintBot()
 
@@ -30,10 +34,12 @@ class CleanupController : HttpServlet() {
                         bot.executeSafe(DeleteMessage(userID, it.getLong("commandMessageID").toInt()))
                     }
 
-                    batch.update(Entity.newBuilder(it)
+                    batch.update(
+                        Entity.newBuilder(it)
                             .remove("printedMessageID")
                             .remove("commandMessageID")
-                            .build())
+                            .build()
+                    )
                 }
             }
         } finally {

@@ -35,7 +35,7 @@ class StatsUserController : StatsController() {
 
         listJobs(users[userID]?.jobs ?: emptyList(), yearSuffix)
 
-        userID.toIntOrNull()?.let(UserStorage::getUser)?.let { user ->
+        userID.toLongOrNull()?.let(UserStorage::getUser)?.let { user ->
             val notifications = UserIliasNotificationStorage.getByUser(user).map {
                 NotificationData(
                     it.getString("name"), it.getString("type"), it.getTimestamp("time"),
@@ -74,7 +74,7 @@ class StatsUserController : StatsController() {
 
     override fun doPost(req: HttpServletRequest, resp: HttpServletResponse) {
         val token = req.session.getAttribute("token") as String?
-        val user = req.pathInfo.drop(1).toIntOrNull()?.let(UserStorage::getUser)
+        val user = req.pathInfo.drop(1).toLongOrNull()?.let(UserStorage::getUser)
         val name = req.getParameter("name")
         resp.writer.println(user)
         resp.writer.println(name)

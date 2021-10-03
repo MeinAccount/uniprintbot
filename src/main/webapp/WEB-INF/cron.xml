@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <cronentries>
-<!--	<cron>-->
-<!--		<url>/notify</url>-->
-<!--		<description>Notifies users about new resources</description>-->
-<!--		<schedule>every 1 hours</schedule>-->
-<!--		<timezone>Europe/Berlin</timezone>-->
-<!--	</cron>-->
+	<!--	<cron>-->
+	<!--		<url>/notify</url>-->
+	<!--		<description>Notifies users about new resources</description>-->
+	<!--		<schedule>every 1 hours</schedule>-->
+	<!--		<timezone>Europe/Berlin</timezone>-->
+	<!--	</cron>-->
 	<cron>
 		<url>/cleanup</url>
 		<description>Purges printed messages after 24 hours</description>
@@ -25,11 +25,11 @@
 		<schedule>every day 10:00</schedule>
 		<timezone>Europe/Berlin</timezone>
 	</cron>
-<!--	<cron>-->
-<!--		<url>/heiko/poll</url>-->
-<!--		<schedule>every sunday 17:13</schedule>-->
-<!--		<timezone>Europe/Berlin</timezone>-->
-<!--	</cron>-->
+	<cron>
+		<url>/heiko/poll</url>
+		<schedule>every sunday 19:13</schedule>
+		<timezone>Europe/Berlin</timezone>
+	</cron>
 
 	<cron>
 		<url>/cedric/daily</url>

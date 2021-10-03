@@ -16,8 +16,12 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 @WebServlet("/notify")
-@ServletSecurity(HttpConstraint(rolesAllowed = arrayOf("admin"),
-        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL))
+@ServletSecurity(
+    HttpConstraint(
+        rolesAllowed = arrayOf("admin"),
+        transportGuarantee = ServletSecurity.TransportGuarantee.CONFIDENTIAL
+    )
+)
 class NotifyController : HttpServlet() {
     private val bot = UniPrintBot()
     private var resources = emptyMap<String, List<IliasResource>>()
@@ -35,7 +39,7 @@ class NotifyController : HttpServlet() {
         UserStorage.listUsers().forEach { user ->
             println("Processing ${user.key.name} ${user.getString("name")}")
             val notifications = UserIliasNotificationStorage.getByUser(user)
-                    .map { it.getString("url") to it }.toMap()
+                .map { it.getString("url") to it }.toMap()
             resources.filterKeys {
                 user.getOptionalBool("notify$it") ?: false
             }.values.flatten().forEach { resource ->
@@ -45,9 +49,11 @@ class NotifyController : HttpServlet() {
                     notification.getString("hash") != resource.hash -> {
                         // require hash to remain changed over two checks
                         if (notification.getOptionalString("hash2") != resource.hash) {
-                            println("${resource.type} ${resource.name} prechange from " +
-                                    "${notification.getString("hash")} to ${resource.hash} " +
-                                    "intermediary ${notification.getOptionalString("hash2")}")
+                            println(
+                                "${resource.type} ${resource.name} prechange from " +
+                                        "${notification.getString("hash")} to ${resource.hash} " +
+                                        "intermediary ${notification.getOptionalString("hash2")}"
+                            )
                             UserIliasNotificationStorage.updateHash2(notification, resource.hash)
                         } else {
                             sendUpdate(resource, notification, user)
@@ -69,7 +75,7 @@ class NotifyController : HttpServlet() {
 
     private fun sendNew(resource: IliasResource, user: Entity) {
         print("${resource.type} ${resource.name} new message ")
-        val command = SendDocument().setChatId(user.key.name)
+        val command = SendDocument().apply { chatId = user.key.name }
         resource.telegram.attach(resource.getPrintName(), command)
 
         try {
@@ -83,10 +89,14 @@ class NotifyController : HttpServlet() {
     }
 
     private fun sendUpdate(resource: IliasResource, notification: Entity, user: Entity) {
-        print("${resource.type} ${resource.name} changed from ${notification.getString("hash")} " +
-                "in ${notification.getLong("messageId")} to ${resource.hash} message ")
-        val command = SendDocument().setChatId(user.key.name)
-                .setReplyToMessageId(notification.getLong("messageId").toInt())
+        print(
+            "${resource.type} ${resource.name} changed from ${notification.getString("hash")} " +
+                    "in ${notification.getLong("messageId")} to ${resource.hash} message "
+        )
+        val command = SendDocument().apply {
+            chatId = user.key.name
+            replyToMessageId = notification.getLong("messageId").toInt()
+        }
         resource.telegram.attach(resource.getPrintName(), command)
 
         try {

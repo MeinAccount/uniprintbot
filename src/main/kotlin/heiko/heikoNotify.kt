@@ -5,10 +5,12 @@ import HEIKO_TODAY
 import com.google.cloud.datastore.Entity
 import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChat
 import org.telegram.telegrambots.meta.api.methods.pinnedmessages.PinChatMessage
+import org.telegram.telegrambots.meta.api.methods.pinnedmessages.UnpinAllChatMessages
 import org.telegram.telegrambots.meta.api.methods.pinnedmessages.UnpinChatMessage
 import org.telegram.telegrambots.meta.api.methods.polls.SendPoll
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.send.SendSticker
+import org.telegram.telegrambots.meta.api.objects.InputFile
 import remote.datastore
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -33,8 +35,10 @@ class HeikoDailyController : HttpServlet() {
             if (extractLocalDate(it) == LocalDate.now()) {
                 val chatId = it.getLong("chatId")
 
-                bot.value.execute(SendMessage(chatId, HEIKO_TODAY).setParseMode("Markdown"))
-                bot.value.execute(SendSticker().setSticker(positiveStickers.random()).setChatId(chatId))
+                bot.value.execute(SendMessage(chatId.toString(), HEIKO_TODAY).apply {
+                    parseMode = "Markdown"
+                })
+                bot.value.execute(SendSticker(chatId.toString(), InputFile(positiveStickers.random())))
             }
         }
     }
@@ -45,8 +49,10 @@ class HeikoDailyController : HttpServlet() {
 class HeikoTodayController : HttpServlet() {
     override fun doGet(req: HttpServletRequest?, resp: HttpServletResponse?) {
         HeikoNotificationBot().apply {
-            execute(SendMessage(HEIKO_GROUP, HEIKO_TODAY).setParseMode("Markdown"))
-            execute(SendSticker().setSticker(positiveStickers.random()).setChatId(HEIKO_GROUP))
+            execute(SendMessage(HEIKO_GROUP, HEIKO_TODAY).apply {
+                parseMode = "Markdown"
+            })
+            execute(SendSticker(HEIKO_GROUP, InputFile(positiveStickers.random())))
         }
     }
 }
@@ -57,6 +63,10 @@ class HeikoPollController : HttpServlet() {
     private val formatter = DateTimeFormatter.ofPattern("EEEE dd.MM.y", Locale.GERMANY)
     override fun doGet(req: HttpServletRequest?, resp: HttpServletResponse?) {
         HeikoNotificationBot().apply {
+            // first unpin all messages
+            execute(UnpinAllChatMessages(HEIKO_GROUP))
+
+            // compute week
             val weekStart = LocalDate.now(ZoneId.of("Europe/Berlin")).run {
                 when (dayOfWeek) {
                     DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> with(TemporalAdjusters.next(DayOfWeek.MONDAY))
@@ -65,20 +75,21 @@ class HeikoPollController : HttpServlet() {
             }
 
             val calendarWeek = WeekFields.of(Locale.GERMANY).weekOfWeekBasedYear()
-            val pollMessage = execute(
-                SendPoll(
-                    HEIKO_GROUP, "Vor-Ort Spieleabend KW${weekStart.get(calendarWeek)}", sequence {
-                        var day = weekStart
-                        do {
-                            yield(day.format(formatter))
-                            day = day.plusDays(1)
-                        } while (day.dayOfWeek != DayOfWeek.MONDAY)
-                        yield("Diese Woche leider nicht")
-                        yield("Ich zähle als geimpft / genesen")
-                    }.toList()
-                ).setAnonymous(false).setAllowMultipleAnswers(true)
-            )
-            execute(PinChatMessage(pollMessage.chatId, pollMessage.messageId))
+            val pollMessage = execute(SendPoll(
+                HEIKO_GROUP, "Vor-Ort Spieleabend KW${weekStart.get(calendarWeek)}", sequence {
+                    var day = weekStart
+                    do {
+                        yield(day.format(formatter))
+                        day = day.plusDays(1)
+                    } while (day.dayOfWeek != DayOfWeek.MONDAY)
+                    yield("Diese Woche leider nicht")
+                    yield("Ich zähle als geimpft / genesen")
+                }.toList()
+            ).apply {
+                isAnonymous = false
+                allowMultipleAnswers = true
+            })
+            execute(PinChatMessage(pollMessage.chatId.toString(), pollMessage.messageId))
         }
     }
 }
@@ -94,9 +105,9 @@ class HeikoCleanupController : HttpServlet() {
                 val chatId = it.getLong("chatId")
                 datastore.delete(it.key)
 
-                val chat = bot.value.execute(GetChat(chatId))
+                val chat = bot.value.execute(GetChat(chatId.toString()))
                 if (chat.pinnedMessage.messageId == it.getInt("messageId") + 1) {
-                    bot.value.execute(UnpinChatMessage(chatId))
+                    bot.value.execute(UnpinChatMessage(chatId.toString()))
                 }
             }
         }

@@ -24,8 +24,9 @@ class HeikoNotificationBot : TelegramLongPollingBot() {
                 processMessage(update.message)
             } else if (update.message.hasSticker() && update.message.chat.isUserChat) {
                 execute(
-                    SendMessage(update.message.chatId, update.message.sticker.fileId)
-                        .setReplyToMessageId(update.message.messageId)
+                    SendMessage(update.message.chatId.toString(), update.message.sticker.fileId).apply {
+                        replyToMessageId = update.message.messageId
+                    }
                 )
             }
         }
@@ -42,16 +43,18 @@ class HeikoNotificationBot : TelegramLongPollingBot() {
                     )
                     if (date >= LocalDate.now()) {
                         val pinned = execute(
-                            SendMessage(message.chatId, "Nächster Spieleabend am ${date.format(DATE_FORMAT)}!")
+                            SendMessage(
+                                message.chatId.toString(),
+                                "Nächster Spieleabend am ${date.format(DATE_FORMAT)}!"
+                            )
                         )
-                        execute(PinChatMessage(pinned.chatId, pinned.messageId))
+                        execute(PinChatMessage(pinned.chatId.toString(), pinned.messageId))
                         storeSDate(date, message)
                     }
                 } catch (e: DateTimeException) {
-                    execute(
-                        SendMessage(message.chatId, "Datum konnte nicht geparst werden")
-                            .setReplyToMessageId(message.messageId)
-                    )
+                    execute(SendMessage(message.chatId.toString(), "Datum konnte nicht geparst werden").apply {
+                        replyToMessageId = message.messageId
+                    })
                 } catch (e: TelegramApiException) {
                     e.printStackTrace()
                 }

@@ -22,14 +22,15 @@ object RemoteHost {
     }
 
     private fun printCommand(path: String, user: Entity? = null) =
-            "echo \"$path von ${user?.getString("name")} am ${Date()}\" >> log; " +
-                    "lp -d fsmath -o sides=two-sided-long-edge $path"
+        "echo \"$path von ${user?.getString("name")} am ${Date()}\" >> log; " +
+                "lp -d fsmath -o sides=two-sided-long-edge $path"
 
 
     fun printTelegramFile(user: Entity, file: File) {
         sshClient { client ->
             client.startSession().use { session ->
-                session.exec("""temp_file=$(mktemp);
+                session.exec(
+                    """temp_file=$(mktemp);
                                 |wget -O ${"$"}temp_file "${file.getFileUrl(BOT_TOKEN)}";
                                 |${printCommand("\$temp_file", user)}""".trimMargin()
                 ).join(30, TimeUnit.SECONDS)
