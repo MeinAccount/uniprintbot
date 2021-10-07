@@ -122,16 +122,12 @@ class UniPrintBot : TelegramLongPollingBot() {
 
         } else if (message.hasDocument() && validateTelegramFile(message.document)) {
             // process uploaded PDFs
-            val keyboard = InlineKeyboardMarkup()
-            keyboard.keyboard.add(
-                listOf(InlineKeyboardButton("${message.document.fileName} drucken").apply {
-                    callbackData = "printTelegramFile"
-                })
-            )
-
             executeSafe(SendMessage(message.chatId.toString(), "Bestätige den Druckvorgang:").apply {
                 replyToMessageId = message.messageId
-                replyMarkup = keyboard
+                replyMarkup =
+                    InlineKeyboardMarkup(listOf(listOf(InlineKeyboardButton("${message.document.fileName} drucken").apply {
+                        callbackData = "printTelegramFile"
+                    })))
             })
         } else {
             executeSafe(SendMessage(message.chatId.toString(), "Ich verarbeite nur PDF-Dateien."))
@@ -179,21 +175,20 @@ class UniPrintBot : TelegramLongPollingBot() {
 
 
     private fun getEditKeyboard(user: Entity): InlineKeyboardMarkup {
-        val keyboard = InlineKeyboardMarkup()
-        keyboard.keyboard = NOTIFY_RESOURCE_LIST.map {
-            val notify = user.getBoolean("notify" + it.dbName)
-            listOf(
-                InlineKeyboardButton("${if (notify) "☑" else "☐"} ${it.name}").apply {
-                    callbackData = "toggleNotify|" + it.dbName
-                }
+        return InlineKeyboardMarkup(
+            NOTIFY_RESOURCE_LIST.map {
+                val notify = user.getBoolean("notify" + it.dbName)
+                listOf(
+                    InlineKeyboardButton("${if (notify) "☑" else "☐"} ${it.name}").apply {
+                        callbackData = "toggleNotify|" + it.dbName
+                    }
+                )
+            }.plusElement(
+                listOf(InlineKeyboardButton("Jetzt neue Blätter abrufen!").apply {
+                    callbackData = "notifyUpdate"
+                })
             )
-        }.plusElement(
-            listOf(InlineKeyboardButton("Jetzt neue Blätter abrufen!").apply {
-                callbackData = "notifyUpdate"
-            })
         )
-
-        return keyboard
     }
 
 
